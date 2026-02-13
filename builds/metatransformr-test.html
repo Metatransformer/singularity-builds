@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pomodoro Timer — Built by AI</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.container{text-align:center;padding:40px}
+h1{font-size:1.4rem;opacity:0.5;margin-bottom:30px;font-weight:400;letter-spacing:2px;text-transform:uppercase}
+.timer{font-size:8rem;font-weight:200;font-variant-numeric:tabular-nums;margin:20px 0;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.timer.break{background:linear-gradient(135deg,#00d4ff,#7b2ff7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.status{font-size:1.2rem;opacity:0.6;margin-bottom:30px}
+.controls{display:flex;gap:15px;justify-content:center;margin-bottom:40px}
+button{background:#1a1a1a;border:1px solid #333;color:#fff;padding:12px 30px;border-radius:50px;font-size:1rem;cursor:pointer;transition:all 0.2s}
+button:hover{background:#222;border-color:#555}
+button.active{background:linear-gradient(135deg,#ff6b6b,#ffa500);border-color:transparent}
+.sessions{display:flex;gap:8px;justify-content:center;margin-bottom:30px}
+.dot{width:12px;height:12px;border-radius:50%;background:#222;border:1px solid #333}
+.dot.done{background:#ff6b6b;border-color:#ff6b6b}
+.dot.current{border-color:#ffa500;box-shadow:0 0 10px rgba(255,165,0,0.3)}
+.settings{margin-top:20px;opacity:0.4;font-size:0.85rem}
+footer{position:fixed;bottom:20px;opacity:0.3;font-size:0.75rem}
+footer a{color:#00d4ff;text-decoration:none}
+</style></head><body>
+<div class="container">
+<h1>Pomodoro Timer</h1>
+<div class="sessions" id="dots"></div>
+<div class="timer" id="time">25:00</div>
+<div class="status" id="status">Ready to focus</div>
+<div class="controls">
+<button id="startBtn" onclick="toggle()">Start</button>
+<button onclick="reset()">Reset</button>
+<button onclick="skip()">Skip</button>
+</div>
+<div class="settings">25min work · 5min break · 15min long break every 4 sessions</div>
+</div>
+<footer>Built by AI in 34 seconds · <a href="https://x.com/metatransformr">@metatransformr</a> · <a href="https://metatransformer.com">metatransformer.com</a></footer>
+<script>
+const WORK=25*60,SHORT=5*60,LONG=15*60;
+let time=WORK,running=false,interval,session=0,isBreak=false,total=4;
+const el=id=>document.getElementById(id);
+function renderDots(){let h='';for(let i=0;i<total;i++){let c=i<session?'done':i===session?'current':'';h+=`<div class="dot ${c}"></div>`}el('dots').innerHTML=h}
+function fmt(s){return`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
+function render(){el('time').textContent=fmt(time);el('time').className='timer'+(isBreak?' break':'');document.title=`${fmt(time)} — ${isBreak?'Break':'Focus'}`}
+function toggle(){if(running){clearInterval(interval);running=false;el('startBtn').textContent='Resume';el('startBtn').classList.remove('active')}else{running=true;el('startBtn').textContent='Pause';el('startBtn').classList.add('active');interval=setInterval(()=>{time--;render();if(time<=0)next()},1000)}}
+function next(){clearInterval(interval);running=false;if(!isBreak){session++;renderDots();isBreak=true;time=session%4===0?LONG:SHORT;el('status').textContent=session%4===0?'Long break — you earned it':'Short break'}else{isBreak=false;time=WORK;el('status').textContent='Time to focus'}render();el('startBtn').textContent='Start';el('startBtn').classList.remove('active');if(Notification.permission==='granted')new Notification(isBreak?'Break time!':'Back to work!')}
+function reset(){clearInterval(interval);running=false;session=0;isBreak=false;time=WORK;render();renderDots();el('status').textContent='Ready to focus';el('startBtn').textContent='Start';el('startBtn').classList.remove('active')}
+function skip(){clearInterval(interval);running=false;next()}
+render();renderDots();
+if('Notification'in window)Notification.requestPermission();
+</script></body></html>
