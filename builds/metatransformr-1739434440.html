@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pomodoro Timer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0a0f;color:#e0e0e0;font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif}
+.container{text-align:center;padding:2rem}
+h1{font-size:1.4rem;font-weight:300;letter-spacing:.3em;text-transform:uppercase;color:#888;margin-bottom:3rem}
+.timer-ring{position:relative;width:320px;height:320px;margin:0 auto 3rem}
+svg{transform:rotate(-90deg)}
+.bg-circle{fill:none;stroke:#1a1a2e;stroke-width:6}
+.progress-circle{fill:none;stroke:url(#grad);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .5s ease}
+.time{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:4.5rem;font-weight:200;letter-spacing:.05em;font-variant-numeric:tabular-nums}
+.label{position:absolute;top:68%;left:50%;transform:translateX(-50%);font-size:.85rem;color:#666;text-transform:uppercase;letter-spacing:.2em}
+.controls{display:flex;gap:1.5rem;justify-content:center;margin-bottom:2rem}
+button{background:none;border:1px solid #333;color:#ccc;padding:.7rem 2rem;border-radius:99px;font-size:.9rem;cursor:pointer;transition:all .2s;letter-spacing:.1em}
+button:hover{border-color:#7c5bf5;color:#fff}
+button.active{background:#7c5bf5;border-color:#7c5bf5;color:#fff}
+.modes{display:flex;gap:1rem;justify-content:center;margin-bottom:3rem}
+.modes button{padding:.5rem 1.2rem;font-size:.75rem}
+.sessions{color:#555;font-size:.8rem;margin-bottom:2rem}
+footer{position:fixed;bottom:1rem;color:#333;font-size:.7rem;letter-spacing:.1em}
+footer a{color:#555;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Pomodoro</h1>
+<div class="modes">
+<button class="mode active" data-time="25">Focus</button>
+<button class="mode" data-time="5">Short Break</button>
+<button class="mode" data-time="15">Long Break</button>
+</div>
+<div class="timer-ring">
+<svg width="320" height="320" viewBox="0 0 320 320">
+<defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#7c5bf5"/><stop offset="100%" style="stop-color:#a78bfa"/></linearGradient></defs>
+<circle class="bg-circle" cx="160" cy="160" r="150"/>
+<circle class="progress-circle" cx="160" cy="160" r="150" stroke-dasharray="942.48" stroke-dashoffset="0"/>
+</svg>
+<div class="time" id="display">25:00</div>
+<div class="label" id="stateLabel">ready</div>
+</div>
+<div class="controls">
+<button id="startBtn">Start</button>
+<button id="resetBtn">Reset</button>
+</div>
+<div class="sessions" id="sessions">Sessions: 0</div>
+</div>
+<footer>Built by AI in 8 seconds · <a href="https://x.com/metatransformr">@metatransformr</a> · <a href="https://metatransformer.com">metatransformer.com</a></footer>
+<script>
+const circle=document.querySelector('.progress-circle'),display=document.getElementById('display'),stateLabel=document.getElementById('stateLabel'),startBtn=document.getElementById('startBtn'),resetBtn=document.getElementById('resetBtn'),sessionsEl=document.getElementById('sessions');
+const circumference=2*Math.PI*150;
+let totalSeconds=25*60,remaining=totalSeconds,running=false,interval=null,sessions=0;
+function setMode(mins){totalSeconds=mins*60;remaining=totalSeconds;running=false;clearInterval(interval);update();startBtn.textContent='Start';stateLabel.textContent='ready';circle.style.strokeDashoffset='0'}
+function update(){const m=Math.floor(remaining/60),s=remaining%60;display.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;const pct=1-remaining/totalSeconds;circle.style.strokeDashoffset=circumference*pct}
+function tick(){if(remaining<=0){clearInterval(interval);running=false;startBtn.textContent='Start';stateLabel.textContent='done!';if(totalSeconds>=25*60){sessions++;sessionsEl.textContent=`Sessions: ${sessions}`}try{new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1pZ2F0f4GJh3x0eX5+dG5ze4GAd3B1e398dHN5fXx1dHh8e3Z2eXx7d3d5e3t4eHl7e3h4eXt7eXl5e3t5eXl7').play()}catch(e){}return}remaining--;update()}
+startBtn.onclick=()=>{if(running){clearInterval(interval);running=false;startBtn.textContent='Start';stateLabel.textContent='paused'}else{interval=setInterval(tick,1000);running=true;startBtn.textContent='Pause';stateLabel.textContent='focusing'}};
+resetBtn.onclick=()=>setMode(totalSeconds/60);
+document.querySelectorAll('.mode').forEach(b=>{b.onclick=()=>{document.querySelectorAll('.mode').forEach(x=>x.classList.remove('active'));b.classList.add('active');setMode(+b.dataset.time)}});
+update();
+</script>
+</body>
+</html>
