@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tetris · Built by AI</title>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+#game-container { position: relative; }
+footer { color: #555; font-size: 12px; padding: 10px; text-align: center; }
+footer a { color: #0ff; text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+.touch-controls { display: none; position: fixed; bottom: 20px; left: 0; right: 0; z-index: 10; padding: 0 10px; }
+.touch-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; }
+.touch-btn { width: 64px; height: 54px; border: 2px solid #0ff4; background: #0ff1; color: #0ff; border-radius: 12px; font-size: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.touch-btn:active { background: #0ff3; }
+.touch-btn.wide { width: 140px; }
+@media (pointer: coarse) { .touch-controls { display: block; } }
+</style>
+</head>
+<body>
+<div id="game-container"></div>
+<div class="touch-controls">
+  <div class="touch-row">
+    <button class="touch-btn" id="btn-rotate">↻</button>
+  </div>
+  <div class="touch-row">
+    <button class="touch-btn" id="btn-left">◀</button>
+    <button class="touch-btn wide" id="btn-drop">▼ DROP</button>
+    <button class="touch-btn" id="btn-right">▶</button>
+  </div>
+  <div class="touch-row">
+    <button class="touch-btn wide" id="btn-down">▽ Down</button>
+  </div>
+</div>
+<footer>Built by AI in 45 seconds · <a href="https://x.com/metatransformr" target="_blank">@metatransformr</a> · <a href="https://metatransformer.com" target="_blank">metatransformer.com</a></footer>
+
+<script>
+const COLS = 10, ROWS = 20, BLOCK = 30;
+const BOARD_W = COLS * BLOCK, BOARD_H = ROWS * BLOCK;
+const SIDEBAR = 160;
+const COLORS = {
+  I: 0x00ffff, O: 0xffff00, T: 0xaa00ff, S: 0x00ff66, Z: 0xff3344, J: 0x3366ff, L: 0xff8800
+};
+const SHAPES = {
+  I: [[0,0],[1,0],[2,0],[3,0]],
+  O: [[0,0],[1,0],[0,1],[1,1]],
+  T: [[0,0],[1,0],[2,0],[1,1]],
+  S: [[1,0],[2,0],[0,1],[1,1]],
+  Z: [[0,0],[1,0],[1,1],[2,1]],
+  J: [[0,0],[0,1],[1,1],[2,1]],
+  L: [[2,0],[0,1],[1,1],[2,1]]
+};
+const TYPES = Object.keys(SHAPES);
+
+class GameScene extends Phaser.Scene {
+  constructor() { super('GameScene'); }
+
+  create() {
+    this.board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+    this.score = 0; this.level = 1; this.lines = 0;
+    this.gameOver = false;
+    this.dropTimer = 0;
+    this.dropInterval = 800;
+    this.lockDelay = 0;
+
+    // BG
+    this.add.rectangle(BOARD_W/2, BOARD_H/2, BOARD_W, BOARD_H, 0x111122).setStrokeStyle(2, 0x0ff0ff);
+
+    // Grid lines
+    const gfx = this.add.graphics();
+    gfx.lineStyle(1, 0x222244, 0.5);
+    for (let x = 0; x <= COLS; x++) { gfx.lineBetween(x*BLOCK, 0, x*BLOCK, BOARD_H); }
+    for (let y = 0; y <= ROWS; y++) { gfx.lineBetween(0, y*BLOCK, BOARD_W, y*BLOCK); }
+
+    // Sidebar
+    const sx = BOARD_W + 20;
+    this.add.text(sx, 10, 'SCORE', { fontSize: '14px', color: '#0ff', fontFamily: 'monospace' });
+    this.scoreText = this.add.text(sx, 30, '0', { fontSize: '24px', color: '#fff', fontFamily: 'monospace', fontStyle: 'bold' });
+    this.add.text(sx, 70, 'LEVEL', { fontSize: '14px', color: '#0ff', fontFamily: 'monospace' });
+    this.levelText = this.add.text(sx, 90, '1', { fontSize: '24px', color: '#fff', fontFamily: 'monospace', fontStyle: 'bold' });
+    this.add.text(sx, 130, 'LINES', { fontSize: '14px', color: '#0ff', fontFamily: 'monospace' });
+    this.linesText = this.add.text(sx, 150, '0', { fontSize: '24px', color: '#fff', fontFamily: 'monospace', fontStyle: 'bold' });
+    this.add.text(sx, 200, 'NEXT', { fontSize: '14px', color: '#0ff', fontFamily: 'monospace' });
+
+    this.nextPreviewGfx = this.add.graphics();
+    this.boardGfx = this.add.graphics();
+    this.pieceGfx = this.add.graphics();
+    this.ghostGfx = this.add.graphics();
+
+    // Game over overlay
+    this.goContainer = this.add.container(BOARD_W/2, BOARD_H/2).setVisible(false).setDepth(10);
+    this.add.rectangle(BOARD_W/2, BOARD_H/2, BOARD_W, BOARD_H, 0x000000, 0.7).setDepth(9).setVisible(false);
+    this.goBg = this.children.list[this.children.list.length - 1];
+    const got = this.add.text(0, -40, 'GAME OVER', { fontSize: '32px', color: '#ff0055', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5);
+    this.goScoreText = this.add.text(0, 10, '', { fontSize: '18px', color: '#fff', fontFamily: 'monospace' }).setOrigin(0.5);
+    const restartText = this.add.text(0, 50, '[ RESTART ]', { fontSize: '20px', color: '#0ff', fontFamily: 'monospace' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    restartText.on('pointerdown', () => this.scene.restart());
+    this.goContainer.add([got, this.goScoreText, restartText]);
+
+    // Input
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keyZ = this.input.keyboard.addKey('Z');
+    this.keyX = this.input.keyboard.addKey('X');
+    this.keyR = this.input.keyboard.addKey('R');
+    this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+    // DAS
+    this.das = { left: 0, right: 0, down: 0 };
+    this.dasDelay = 170; this.dasRepeat = 50;
+
+    // Touch
+    const emit = (e) => { this.input.keyboard.emit('keydown-' + e, {preventDefault:()=>{}}); };
+    document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); this.touchMove('left'); });
+    document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); this.touchMove('right'); });
+    document.getElementById('btn-down').addEventListener('touchstart', (e) => { e.preventDefault(); this.touchMove('down'); });
+    document.getElementById('btn-rotate').addEventListener('touchstart', (e) => { e.preventDefault(); this.rotatePiece(1); });
+    document.getElementById('btn-drop').addEventListener('touchstart', (e) => { e.preventDefault(); this.hardDrop(); });
+
+    this.bag = []; 
+    this.nextType = this.pullFromBag();
+    this.spawnPiece();
+  }
+
+  touchMove(dir) {
+    if (this.gameOver) return;
+    if (dir === 'left') this.movePiece(-1, 0);
+    else if (dir === 'right') this.movePiece(1, 0);
+    else if (dir === 'down') this.movePiece(0, 1);
+  }
+
+  pullFromBag() {
+    if (this.bag.length === 0) {
+      this.bag = [...TYPES];
+      for (let i = this.bag.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.bag[i], this.bag[j]] = [this.bag[j], this.bag[i]];
+      }
+    }
+    return this.bag.pop();
+  }
+
+  spawnPiece() {
+    this.currentType = this.nextType;
+    this.nextType = this.pullFromBag();
+    this.currentBlocks = SHAPES[this.currentType].map(b => [...b]);
+    this.pieceX = Math.floor((COLS - 4) / 2);
+    this.pieceY = -1;
+    this.lockDelay = 0;
+    if (!this.isValid(this.pieceX, this.pieceY, this.currentBlocks)) {
+      this.endGame();
+    }
+    this.drawNextPreview();
+  }
+
+  drawNextPreview() {
+    const g = this.nextPreviewGfx;
+    g.clear();
+    const blocks = SHAPES[this.nextType];
+    const color = COLORS[this.nextType];
+    const ox = BOARD_W + 25, oy = 225;
+    const s = 20;
+    blocks.forEach(([bx, by]) => {
+      g.fillStyle(color, 1);
+      g.fillRect(ox + bx * s, oy + by * s, s - 2, s - 2);
+      g.fillStyle(0xffffff, 0.15);
+      g.fillRect(ox + bx * s, oy + by * s, s - 2, 4);
+    });
+  }
+
+  isValid(px, py, blocks) {
+    return blocks.every(([bx, by]) => {
+      const x = px + bx, y = py + by;
+      return x >= 0 && x < COLS && y < ROWS && (y < 0 || this.board[y][x] === 0);
+    });
+  }
+
+  movePiece(dx, dy) {
+    if (this.gameOver) return false;
+    if (this.isValid(this.pieceX + dx, this.pieceY + dy, this.currentBlocks)) {
+      this.pieceX += dx;
+      this.pieceY += dy;
+      return true;
+    }
+    return false;
+  }
+
+  rotatePiece(dir) {
+    if (this.gameOver || this.currentType === 'O') return;
+    const rotated = this.currentBlocks.map(([x, y]) => dir === 1 ? [-y, x] : [y, -x]);
+    const minX = Math.min(...rotated.map(b => b[0]));
+    const minY = Math.min(...rotated.map(b => b[1]));
+    const normalized = rotated.map(([x, y]) => [x - minX, y - minY]);
+    
+    // Wall kicks
+    const kicks = [0, -1, 1, -2, 2];
+    for (const kick of kicks) {
+      if (this.isValid(this.pieceX + kick, this.pieceY, normalized)) {
+        this.currentBlocks = normalized;
+        this.pieceX += kick;
+        return;
+      }
+    }
+  }
+
+  hardDrop() {
+    if (this.gameOver) return;
+    let dropped = 0;
+    while (this.isValid(this.pieceX, this.pieceY + 1, this.currentBlocks)) {
+      this.pieceY++;
+      dropped++;
+    }
+    this.score += dropped * 2;
+    this.lockPiece();
+  }
+
+  lockPiece() {
+    const color = COLORS[this.currentType];
+    this.currentBlocks.forEach(([bx, by]) => {
+      const y = this.pieceY + by, x = this.pieceX + bx;
+      if (y >= 0 && y < ROWS) this.board[y][x] = color;
+    });
+    this.clearLines();
+    this.spawnPiece();
+  }
+
+  clearLines() {
+    let cleared = 0;
+    for (let y = ROWS - 1; y >= 0; y--) {
+      if (this.board[y].every(c => c !== 0)) {
+        this.board.splice(y, 1);
+        this.board.unshift(Array(COLS).fill(0));
+        cleared++;
+        y++;
+      }
+    }
+    if (cleared > 0) {
+      const pts = [0, 100, 300, 500, 800];
+      this.score += (pts[cleared] || 800) * this.level;
+      this.lines += cleared;
+      this.level = Math.floor(this.lines / 10) + 1;
+      this.dropInterval = Math.max(50, 800 - (this.level - 1) * 70);
+    }
+  }
+
+  endGame() {
+    this.gameOver = true;
+    this.goContainer.setVisible(true);
+    this.goBg.setVisible(true);
+    this.goScoreText.setText('Score: ' + this.score);
+  }
+
+  getGhostY() {
+    let gy = this.pieceY;
+    while (this.isValid(this.pieceX, gy + 1, this.currentBlocks)) gy++;
+    return gy;
+  }
+
+  update(time, delta) {
+    if (this.gameOver) {
+      if (Phaser.Input.Keyboard.JustDown(this.keyR)) this.scene.restart();
+      return;
+    }
+
+    // DAS for left
+    if (this.cursors.left.isDown) {
+      if (this.das.left === 0) { this.movePiece(-1, 0); this.das.left = 1; this.das.leftT = 0; }
+      else { this.das.leftT += delta; if (this.das.left === 1 && this.das.leftT > this.dasDelay) { this.das.left = 2; this.das.leftT = 0; } if (this.das.left === 2 && this.das.leftT > this.dasRepeat) { this.movePiece(-1, 0); this.das.leftT = 0; } }
+    } else { this.das.left = 0; }
+
+    if (this.cursors.right.isDown) {
+      if (this.das.right === 0) { this.movePiece(1, 0); this.das.right = 1; this.das.rightT = 0; }
+      else { this.das.rightT += delta; if (this.das.right === 1 && this.das.rightT > this.dasDelay) { this.das.right = 2; this.das.rightT = 0; } if (this.das.right === 2 && this.das.rightT > this.dasRepeat) { this.movePiece(1, 0); this.das.rightT = 0; } }
+    } else { this.das.right = 0; }
+
+    if (this.cursors.down.isDown) {
+      if (this.das.down === 0) { this.movePiece(0, 1); this.das.down = 1; this.das.downT = 0; this.score += 1; }
+      else { this.das.downT += delta; if (this.das.downT > 50) { if(this.movePiece(0, 1)) this.score += 1; this.das.downT = 0; } }
+    } else { this.das.down = 0; }
+
+    if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) this.rotatePiece(1);
+    if (Phaser.Input.Keyboard.JustDown(this.keyZ)) this.rotatePiece(-1);
+    if (Phaser.Input.Keyboard.JustDown(this.keyX)) this.rotatePiece(1);
+    if (Phaser.Input.Keyboard.JustDown(this.keySpace)) this.hardDrop();
+
+    // Gravity
+    this.dropTimer += delta;
+    if (this.dropTimer >= this.dropInterval) {
+      this.dropTimer = 0;
+      if (!this.movePiece(0, 1)) {
+        this.lockDelay += this.dropInterval;
+        if (this.lockDelay >= 500) this.lockPiece();
+      } else {
+        this.lockDelay = 0;
+      }
+    }
+
+    // Draw
+    this.scoreText.setText(this.score.toString());
+    this.levelText.setText(this.level.toString());
+    this.linesText.setText(this.lines.toString());
+
+    // Board
+    const bg = this.boardGfx;
+    bg.clear();
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (this.board[y][x]) {
+          bg.fillStyle(this.board[y][x], 1);
+          bg.fillRect(x * BLOCK, y * BLOCK, BLOCK - 2, BLOCK - 2);
+          bg.fillStyle(0xffffff, 0.12);
+          bg.fillRect(x * BLOCK, y * BLOCK, BLOCK - 2, 5);
+        }
+      }
+    }
+
+    // Ghost
+    const gg = this.ghostGfx;
+    gg.clear();
+    const gy = this.getGhostY();
+    if (gy !== this.pieceY) {
+      this.currentBlocks.forEach(([bx, by]) => {
+        const dx = (this.pieceX + bx) * BLOCK, dy = (gy + by) * BLOCK;
+        if (gy + by >= 0) {
+          gg.lineStyle(2, COLORS[this.currentType], 0.3);
+          gg.strokeRect(dx + 2, dy + 2, BLOCK - 6, BLOCK - 6);
+        }
+      });
+    }
+
+    // Current piece
+    const pg = this.pieceGfx;
+    pg.clear();
+    const color = COLORS[this.currentType];
+    this.currentBlocks.forEach(([bx, by]) => {
+      const dx = (this.pieceX + bx) * BLOCK, dy = (this.pieceY + by) * BLOCK;
+      if (this.pieceY + by >= 0) {
+        pg.fillStyle(color, 1);
+        pg.fillRect(dx, dy, BLOCK - 2, BLOCK - 2);
+        pg.fillStyle(0xffffff, 0.2);
+        pg.fillRect(dx, dy, BLOCK - 2, 5);
+      }
+    });
+  }
+}
+
+const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 600;
+const scale = isMobile ? Math.min((window.innerWidth - 20) / (BOARD_W + SIDEBAR), (window.innerHeight - 160) / BOARD_H) : 1;
+
+const config = {
+  type: Phaser.AUTO,
+  width: BOARD_W + SIDEBAR,
+  height: BOARD_H,
+  parent: 'game-container',
+  backgroundColor: '#0a0a0f',
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  scene: [GameScene]
+};
+
+new Phaser.Game(config);
+</script>
+</body>
+</html>
