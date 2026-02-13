@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .timer-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timer-display {
+            font-size: 4rem;
+            font-weight: bold;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .timer-type {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .work-phase { color: #ff6b6b; }
+        .break-phase { color: #4ecdc4; }
+        .long-break-phase { color: #45b7d1; }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .settings {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .setting-group {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #feca57;
+        }
+
+        .setting-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+        }
+
+        .stats {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stats h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #feca57;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            text-align: center;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .timer-display {
+                font-size: 3rem;
+            }
+            
+            .timer-section {
+                padding: 20px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 200px;
+            }
+            
+            .settings {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍅 Pomodoro Timer</h1>
+            <p>Stay focused, take breaks, be productive</p>
+        </div>
+
+        <div class="timer-section">
+            <div class="timer-type" id="timerType">Work Session</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="timer-display" id="timerDisplay">25:00</div>
+            <div class="controls">
+                <button class="btn btn-primary" id="startBtn">Start</button>
+                <button class="btn btn-secondary" id="pauseBtn" disabled>Pause</button>
+                <button class="btn btn-secondary" id="resetBtn">Reset</button>
+                <button class="btn btn-secondary" id="skipBtn">Skip</button>
+            </div>
+        </div>
+
+        <div class="settings">
+            <div class="setting-group">
+                <label for="workDuration">Work Duration (minutes)</label>
+                <input type="number" id="workDuration" min="1" max="60" value="25">
+            </div>
+            <div class="setting-group">
+                <label for="breakDuration">Short Break (minutes)</label>
+                <input type="number" id="breakDuration" min="1" max="30" value="5">
+            </div>
+            <div class="setting-group">
+                <label for="longBreakDuration">Long Break (minutes)</label>
+                <input type="number" id="longBreakDuration" min="1" max="60" value="15">
+            </div>
+            <div class="setting-group">
+                <label for="sessionsUntilLongBreak">Sessions until Long Break</label>
+                <input type="number" id="sessionsUntilLongBreak" min="2" max="10" value="4">
+            </div>
+        </div>
+
+        <div class="stats">
+            <h2>📊 Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalSessions">0</div>
+                    <div class="stat-label">Total Sessions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="todaySessions">0</div>
+                    <div class="stat-label">Today's Sessions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="totalMinutes">0</div>
+                    <div class="stat-label">Total Minutes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="currentStreak">0</div>
+                    <div class="stat-label">Current Streak</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SingularityDB {
+            constructor(namespace) {
+                this.namespace = namespace;
+                this.apiUrl = "https://ezgp6iqy5c.execute-api.us-east-1.amazonaws.com/api/data";
+            }
+            async get(key) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`);
+                if (res.status === 404) return null;
+                const data = await res.json();
+                return data.value;
+            }
+            async set(key, value) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ value }),
+                });
+                return res.json();
+            }
+            async delete(key) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                    method: "DELETE",
+                });
+                return res.json();
+            }
+            async list() {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}`);
+                return res.json();
+            }
+        }
+
+        class PomodoroTimer {
+            constructor() {
+                this.db = new SingularityDB('showcase-pomodoro');
+                this.timer = null;
+                this.isRunning = false;
+                this.currentPhase = 'work'; // work, break, longBreak
+                this.currentSession = 1;
+                this.timeRemaining = 25 * 60; // seconds
+                this.totalTime = 25 * 60;
+                
+                this.settings = {
+                    workDuration: 25,
+                    breakDuration: 5,
+                    longBreakDuration: 15,
+                    sessionsUntilLongBreak: 4
+                };
+
+                this.stats = {
+                    totalSessions: 0,
+                    todaySessions: 0,
+                    totalMinutes: 0,
+                    currentStreak: 0,
+                    lastSessionDate: null
+                };
+
+                this.initializeElements();
+                this.loadData();
+                this.updateDisplay();
+                this.bindEvents();
+            }
+
+            initializeElements() {
+                this.timerDisplay = document.getElementById('timerDisplay');
+                this.timerType = document.getElementById('timerType');
+                this.progressFill = document.getElementById('progressFill');
+                this.startBtn = document.getElementById('startBtn');
+                this.pauseBtn = document.getElementById('pauseBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.skipBtn = document.getElementById('skipBtn');
+                
+                this.workDurationInput = document.getElementById('workDuration');
+                this.breakDurationInput = document.getElementById('breakDuration');
+                this.longBreakDurationInput = document.getElementById('longBreakDuration');
+                this.sessionsUntilLongBreakInput = document.getElementById('sessionsUntilLongBreak');
+                
+                this.totalSessionsEl = document.getElementById('totalSessions');
+                this.todaySessionsEl = document.getElementById('todaySessions');
+                this.totalMinutesEl = document.getElementById('totalMinutes');
+                this.currentStreakEl = document.getElementById('currentStreak');
+            }
+
+            async loadData() {
+                try {
+                    const savedSettings = await this.db.get('settings');
+                    if (savedSettings) {
+                        this.settings = { ...this.settings, ...savedSettings };
+                        this.updateSettingsInputs();
+                    }
+
+                    const savedStats = await this.db.get('stats');
+                    if (savedStats) {
+                        this.stats = { ...this.stats, ...savedStats };
+                        this.updateTodaysSessions();
+                    }
+
+                    this.updateStatsDisplay();
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                }
+            }
+
+            async saveData() {
+                try {
+                    await this.db.set('settings', this.settings);
+                    await this.db.set('stats', this.stats);
+                } catch (error) {
+                    console.error('Error saving data:', error);
+                }
+            }
+
+            updateSettingsInputs() {
+                this.workDurationInput.value = this.settings.workDuration;
+                this.breakDurationInput.value = this.settings.breakDuration;
+                this.longBreakDurationInput.value = this.settings.longBreakDuration;
+                this.sessionsUntilLongBreakInput.value = this.settings.sessionsUntilLongBreak;
+            }
+
+            updateTodaysSessions() {
+                const today = new Date().toDateString();
+                if (this.stats.lastSessionDate !== today) {
+                    this.stats.todaySessions = 0;
+                }
+            }
+
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => this.start());
+                this.pauseBtn.addEventListener('click', () => this.pause());
+                this.resetBtn.addEventListener('click', () => this.reset());
+                this.skipBtn.addEventListener('click', () => this.skip());
+
+                [this.workDurationInput, this.breakDurationInput, this.longBreakDurationInput, this.sessionsUntilLongBreakInput].forEach(input => {
+                    input.addEventListener('change', () => this.updateSettings());
+                });
+            }
+
+            updateSettings() {
+                this.settings.workDuration = parseInt(this.workDurationInput.value);
+                this.settings.breakDuration = parseInt(this.breakDurationInput.value);
+                this.settings.longBreakDuration = parseInt(this.longBreakDurationInput.value);
+                this.settings.sessionsUntilLongBreak = parseInt(this.sessionsUntilLongBreakInput.value);
+                
+                if (!this.isRunning) {
+                    this.reset();
+                }
+                
+                this.saveData();
+            }
+
+            start() {
+                this.isRunning = true;
+                this.startBtn.disabled = true;
+                this.pauseBtn.disabled = false;
+                
+                this.timer = setInterval(() => {
+                    this.timeRemaining--;
+                    this.updateDisplay();
+                    
+                    if (this.timeRemaining <= 0) {
+                        this.completePhase();
+                    }
+                }, 1000);
+            }
+
+            pause() {
+                this.isRunning = false;
+                this.startBtn.disabled = false;
+                this.pauseBtn.disabled = true;
+                clearInterval(this.timer);
+            }
+
+            reset() {
+                this.pause();
+                this.setPhase(this.currentPhase);
+                this.updateDisplay();
+            }
+
+            skip() {
+                this.completePhase();
+            }
+
+            completePhase() {
+                clearInterval(this.timer);
+                this.isRunning = false;
+                this.startBtn.disabled = false;
+                this.pauseBtn.disabled = true;
+
+                if (this.currentPhase === 'work') {
+                    this.recordCompletedSession();
+                    
+                    if (this.currentSession % this.settings.sessionsUntilLongBreak === 0) {
+                        this.setPhase('longBreak');
+                    } else {
+                        this.setPhase('break');
+                    }
+                } else {
+                    this.currentSession++;
+                    this.setPhase('work');
+                }
+
+                this.updateDisplay();
+                this.playNotificationSound();
+            }
+
+            setPhase(phase) {
+                this.currentPhase = phase;
+                
+                switch (phase) {
+                    case 'work':
+                        this.timeRemaining = this.settings.workDuration * 60;
+                        this.totalTime = this.settings.workDuration * 60;
+                        break;
+                    case 'break':
+                        this.timeRemaining = this.settings.breakDuration * 60;
+                        this.totalTime = this.settings.breakDuration * 60;
+                        break;
+                    case 'longBreak':
+                        this.timeRemaining = this.settings.longBreakDuration * 60;
+                        this.totalTime = this.settings.longBreakDuration * 60;
+                        break;
+                }
+            }
+
+            recordCompletedSession() {
+                const today = new Date().toDateString();
+                
+                this.stats.totalSessions++;
+                this.stats.totalMinutes += this.settings.workDuration;
+                
+                if (this.stats.lastSessionDate === today) {
+                    this.stats.todaySessions++;
+                    this.stats.currentStreak++;
+                } else {
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    
+                    if (this.stats.lastSessionDate === yesterday.toDateString()) {
+                        this.stats.currentStreak++;
+                    } else {
+                        this.stats.currentStreak = 1;
+                    }
+                    
+                    this.stats.todaySessions = 1;
+                }
+                
+                this.stats.lastSessionDate = today;
+                this.updateStatsDisplay();
+                this.saveData();
+            }
+
+            updateDisplay() {
+                const minutes = Math.floor(this.timeRemaining / 60);
+                const seconds = this.timeRemaining % 60;
+                this.timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                const progress = ((this.totalTime - this.timeRemaining) / this.totalTime) * 100;
+                this.progressFill.style.width = `${progress}%`;
+                
+                this.timerType.className = `timer-type ${this.currentPhase}-phase`;
+                
+                switch (this.currentPhase) {
+                    case 'work':
+                        this.timerType.textContent = `Work Session ${this.currentSession}`;
+                        break;
+                    case 'break':
+                        this.timerType.textContent = 'Short Break';
+                        break;
+                    case 'longBreak':
+                        this.timerType.textContent = 'Long Break';
+                        break;
+                }
+
+                document.title = `${this.timerDisplay.textContent} - ${this.timerType.textContent}`;
+            }
+
+            updateStatsDisplay() {
+                this.totalSessionsEl.textContent = this.stats.totalSessions;
+                this.todaySessionsEl.textContent = this.stats.todaySessions;
+                this.totalMinutesEl.textContent = this.stats.totalMinutes;
+                this.currentStreakEl.textContent = this.stats.currentStreak;
+            }
+
+            playNotificationSound() {
+                // Create a simple beep sound using Web Audio API
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            }
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new PomodoroTimer();
+        });
+    </script>
+</body>
+</html>
