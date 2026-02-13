@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scientific Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .calculator-container {
+            display: flex;
+            gap: 20px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .calculator {
+            background: rgba(20, 20, 20, 0.9);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            flex: 1;
+            min-width: 350px;
+        }
+
+        .display {
+            background: #0d1117;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .current-input {
+            font-size: 2rem;
+            color: #58a6ff;
+            min-height: 50px;
+            word-wrap: break-word;
+            text-align: right;
+        }
+
+        .previous-operation {
+            font-size: 1rem;
+            color: #8b949e;
+            margin-bottom: 10px;
+            min-height: 20px;
+            text-align: right;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+
+        button {
+            height: 60px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: linear-gradient(145deg, #21262d, #161b22);
+            color: #f0f6fc;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .operator {
+            background: linear-gradient(145deg, #ff6b6b, #ee5a52);
+            color: white;
+        }
+
+        .function {
+            background: linear-gradient(145deg, #4ecdc4, #45b7aa);
+            color: white;
+        }
+
+        .equals {
+            background: linear-gradient(145deg, #ffd93d, #ffcd3c);
+            color: #000;
+            grid-column: span 2;
+        }
+
+        .clear {
+            background: linear-gradient(145deg, #ff8a80, #ff5722);
+            color: white;
+        }
+
+        .history-panel {
+            background: rgba(20, 20, 20, 0.9);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .history-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #58a6ff;
+        }
+
+        .clear-history {
+            background: linear-gradient(145deg, #ff8a80, #ff5722);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-item {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover {
+            background: #21262d;
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .history-expression {
+            color: #8b949e;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .history-result {
+            color: #58a6ff;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .history-empty {
+            text-align: center;
+            color: #6e7681;
+            font-style: italic;
+            padding: 40px 20px;
+        }
+
+        @media (max-width: 768px) {
+            .calculator-container {
+                flex-direction: column;
+            }
+            
+            .history-panel {
+                width: 100%;
+                max-height: 300px;
+            }
+
+            .calculator {
+                min-width: auto;
+            }
+
+            .buttons {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .current-input {
+                font-size: 1.5rem;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="calculator">
+            <div class="display">
+                <div class="previous-operation" id="previousOperation"></div>
+                <div class="current-input" id="currentInput">0</div>
+            </div>
+            <div class="buttons">
+                <button class="clear" onclick="clearAll()">AC</button>
+                <button class="clear" onclick="clearEntry()">CE</button>
+                <button class="function" onclick="appendFunction('√(')">√</button>
+                <button class="function" onclick="appendFunction('pow(', ',2)')">x²</button>
+                <button class="operator" onclick="appendOperator('/')">/</button>
+
+                <button class="function" onclick="appendFunction('sin(')">sin</button>
+                <button class="function" onclick="appendFunction('cos(')">cos</button>
+                <button class="function" onclick="appendFunction('tan(')">tan</button>
+                <button class="function" onclick="appendFunction('ln(')">ln</button>
+                <button class="operator" onclick="appendOperator('*')">×</button>
+
+                <button onclick="appendNumber('7')">7</button>
+                <button onclick="appendNumber('8')">8</button>
+                <button onclick="appendNumber('9')">9</button>
+                <button class="function" onclick="appendFunction('log(')">log</button>
+                <button class="operator" onclick="appendOperator('-')">-</button>
+
+                <button onclick="appendNumber('4')">4</button>
+                <button onclick="appendNumber('5')">5</button>
+                <button onclick="appendNumber('6')">6</button>
+                <button class="function" onclick="appendNumber('3.14159')">π</button>
+                <button class="operator" onclick="appendOperator('+')">+</button>
+
+                <button onclick="appendNumber('1')">1</button>
+                <button onclick="appendNumber('2')">2</button>
+                <button onclick="appendNumber('3')">3</button>
+                <button class="function" onclick="appendNumber('2.71828')">e</button>
+                <button class="function" onclick="appendOperator('^')">^</button>
+
+                <button onclick="appendNumber('0')">0</button>
+                <button onclick="appendNumber('.')">.</button>
+                <button onclick="deleteLast()">⌫</button>
+                <button class="equals" onclick="calculate()">=</button>
+            </div>
+        </div>
+
+        <div class="history-panel">
+            <div class="history-header">
+                <div class="history-title">History</div>
+                <button class="clear-history" onclick="clearHistory()">Clear</button>
+            </div>
+            <div id="historyList">
+                <div class="history-empty">No calculations yet</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SingularityDB {
+            constructor(namespace) {
+                this.namespace = namespace;
+                this.apiUrl = "https://ezgp6iqy5c.execute-api.us-east-1.amazonaws.com/api/data";
+            }
+            async get(key) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`);
+                if (res.status === 404) return null;
+                const data = await res.json();
+                return data.value;
+            }
+            async set(key, value) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ value }),
+                });
+                return res.json();
+            }
+            async delete(key) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                    method: "DELETE",
+                });
+                return res.json();
+            }
+            async list() {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}`);
+                return res.json();
+            }
+        }
+
+        const db = new SingularityDB('showcase-calculator');
+        
+        let currentInput = '0';
+        let previousOperation = '';
+        let history = [];
+        
+        const currentInputElement = document.getElementById('currentInput');
+        const previousOperationElement = document.getElementById('previousOperation');
+        
+        async function loadHistory() {
+            try {
+                const savedHistory = await db.get('history');
+                if (savedHistory) {
+                    history = savedHistory;
+                    renderHistory();
+                }
+            } catch (error) {
+                console.error('Failed to load history:', error);
+            }
+        }
+        
+        async function saveHistory() {
+            try {
+                await db.set('history', history);
+            } catch (error) {
+                console.error('Failed to save history:', error);
+            }
+        }
+        
+        function updateDisplay() {
+            currentInputElement.textContent = currentInput;
+            previousOperationElement.textContent = previousOperation;
+        }
+        
+        function appendNumber(num) {
+            if (currentInput === '0' && num !== '.') {
+                currentInput = num;
+            } else {
+                currentInput += num;
+            }
+            updateDisplay();
+        }
+        
+        function appendOperator(op) {
+            if (previousOperation && currentInput !== '0') {
+                calculate();
+            }
+            previousOperation = currentInput + ' ' + op;
+            currentInput = '0';
+            updateDisplay();
+        }
+        
+        function appendFunction(func, suffix = ')') {
+            if (currentInput === '0') {
+                currentInput = func;
+            } else {
+                currentInput += func;
+            }
+            if (suffix) {
+                currentInput += currentInput.slice(func.length) + suffix;
+            }
+            updateDisplay();
+        }
+        
+        function clearAll() {
+            currentInput = '0';
+            previousOperation = '';
+            updateDisplay();
+        }
+        
+        function clearEntry() {
+            currentInput = '0';
+            updateDisplay();
+        }
+        
+        function deleteLast() {
+            if (currentInput.length > 1) {
+                currentInput = currentInput.slice(0, -1);
+            } else {
+                currentInput = '0';
+            }
+            updateDisplay();
+        }
+        
+        function calculate() {
+            try {
+                let expression = previousOperation ? previousOperation.slice(0, -2) + currentInput : currentInput;
+                
+                // Replace display operators with JavaScript operators
+                expression = expression.replace(/×/g, '*');
+                expression = expression.replace(/\^/g, '**');
+                
+                // Handle mathematical functions
+                expression = expression.replace(/sin\(/g, 'Math.sin(');
+                expression = expression.replace(/cos\(/g, 'Math.cos(');
+                expression = expression.replace(/tan\(/g, 'Math.tan(');
+                expression = expression.replace(/ln\(/g, 'Math.log(');
+                expression = expression.replace(/log\(/g, 'Math.log10(');
+                expression = expression.replace(/√\(/g, 'Math.sqrt(');
+                expression = expression.replace(/pow\(/g, 'Math.pow(');
+                
+                const result = Function('"use strict"; return (' + expression + ')')();
+                
+                if (isNaN(result) || !isFinite(result)) {
+                    throw new Error('Invalid calculation');
+                }
+                
+                const historyItem = {
+                    expression: previousOperation ? previousOperation.slice(0, -2) + currentInput : currentInput,
+                    result: result.toString(),
+                    timestamp: new Date().toISOString()
+                };
+                
+                history.unshift(historyItem);
+                if (history.length > 50) {
+                    history = history.slice(0, 50);
+                }
+                
+                saveHistory();
+                renderHistory();
+                
+                currentInput = result.toString();
+                previousOperation = '';
+                updateDisplay();
+                
+            } catch (error) {
+                currentInput = 'Error';
+                previousOperation = '';
+                updateDisplay();
+            }
+        }
+        
+        function renderHistory() {
+            const historyList = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                historyList.innerHTML = '<div class="history-empty">No calculations yet</div>';
+                return;
+            }
+            
+            historyList.innerHTML = history.map(item => `
+                <div class="history-item" onclick="useHistoryResult('${item.result}')">
+                    <div class="history-expression">${item.expression}</div>
+                    <div class="history-result">= ${item.result}</div>
+                </div>
+            `).join('');
+        }
+        
+        function useHistoryResult(result) {
+            currentInput = result;
+            previousOperation = '';
+            updateDisplay();
+        }
+        
+        async function clearHistory() {
+            history = [];
+            await saveHistory();
+            renderHistory();
+        }
+        
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') {
+                appendNumber(e.key);
+            } else if (e.key === '.') {
+                appendNumber('.');
+            } else if (e.key === '+') {
+                appendOperator('+');
+            } else if (e.key === '-') {
+                appendOperator('-');
+            } else if (e.key === '*') {
+                appendOperator('*');
+            } else if (e.key === '/') {
+                e.preventDefault();
+                appendOperator('/');
+            } else if (e.key === 'Enter' || e.key === '=') {
+                calculate();
+            } else if (e.key === 'Escape') {
+                clearAll();
+            } else if (e.key === 'Backspace') {
+                deleteLast();
+            }
+        });
+        
+        // Initialize
+        loadHistory();
+        updateDisplay();
+    </script>
+</body>
+</html>
