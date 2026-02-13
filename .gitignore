@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.done
+done/
+pending-replies/
+.DS_Store
+*.zip
+function.zip
