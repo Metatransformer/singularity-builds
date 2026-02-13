@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Todo List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #64ffda;
+            font-size: 2.5rem;
+            text-shadow: 0 0 20px rgba(100, 255, 218, 0.3);
+        }
+
+        .add-todo {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid rgba(100, 255, 218, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            color: #e0e0e0;
+            font-size: 16px;
+            min-width: 200px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #64ffda;
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.2);
+        }
+
+        input[type="text"]::placeholder {
+            color: #999;
+        }
+
+        button {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #64ffda, #00bcd4);
+            border: none;
+            border-radius: 15px;
+            color: #1a1a2e;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(100, 255, 218, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .todo-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .todo-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        .todo-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(5px);
+        }
+
+        .todo-item.completed {
+            opacity: 0.6;
+            background: rgba(100, 255, 218, 0.05);
+        }
+
+        .todo-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #64ffda;
+            border-radius: 6px;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .todo-checkbox.checked {
+            background: #64ffda;
+        }
+
+        .todo-checkbox.checked::after {
+            content: '✓';
+            color: #1a1a2e;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .todo-text.completed {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .todo-meta {
+            font-size: 12px;
+            color: #999;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .delete-btn {
+            background: linear-gradient(135deg, #ff5722, #f44336);
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 8px;
+            min-width: auto;
+        }
+
+        .loading {
+            text-align: center;
+            color: #64ffda;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            font-size: 18px;
+            margin: 40px 0;
+            opacity: 0.7;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .add-todo {
+                flex-direction: column;
+            }
+
+            input[type="text"] {
+                min-width: 100%;
+            }
+
+            .todo-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .todo-meta {
+                align-items: flex-start;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Collaborative Todo List</h1>
+        
+        <div class="add-todo">
+            <input type="text" id="todoInput" placeholder="What needs to be done?">
+            <button onclick="addTodo()">Add Todo</button>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">Loading...</div>
+        <div id="todoList" class="todo-list"></div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            No todos yet. Add one above to get started! 🚀
+        </div>
+    </div>
+
+    <script>
+        class SingularityDB {
+            constructor(namespace) {
+                this.namespace = namespace;
+                this.apiUrl = "https://ezgp6iqy5c.execute-api.us-east-1.amazonaws.com/api/data";
+            }
+            async get(key) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`);
+                if (res.status === 404) return null;
+                const data = await res.json();
+                return data.value;
+            }
+            async set(key, value) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ value }),
+                });
+                return res.json();
+            }
+            async delete(key) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                    method: "DELETE",
+                });
+                return res.json();
+            }
+            async list() {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}`);
+                return res.json();
+            }
+        }
+
+        const db = new SingularityDB('collaborative-todo-list');
+        let todos = [];
+
+        async function loadTodos() {
+            const loadingEl = document.getElementById('loading');
+            loadingEl.style.display = 'block';
+            
+            try {
+                const todoData = await db.get('todos');
+                todos = todoData || [];
+                renderTodos();
+            } catch (error) {
+                console.error('Error loading todos:', error);
+            }
+            
+            loadingEl.style.display = 'none';
+        }
+
+        async function saveTodos() {
+            try {
+                await db.set('todos', todos);
+            } catch (error) {
+                console.error('Error saving todos:', error);
+            }
+        }
+
+        function renderTodos() {
+            const todoList = document.getElementById('todoList');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (todos.length === 0) {
+                todoList.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            todoList.innerHTML = todos.map((todo, index) => `
+                <div class="todo-item ${todo.completed ? 'completed' : ''}">
+                    <div class="todo-checkbox ${todo.completed ? 'checked' : ''}" onclick="toggleTodo(${index})"></div>
+                    <div class="todo-text ${todo.completed ? 'completed' : ''}">${escapeHtml(todo.text)}</div>
+                    <div class="todo-meta">
+                        <div>${new Date(todo.createdAt).toLocaleDateString()}</div>
+                        <button class="delete-btn" onclick="deleteTodo(${index})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addTodo() {
+            const input = document.getElementById('todoInput');
+            const text = input.value.trim();
+            
+            if (!text) return;
+            
+            const newTodo = {
+                id: Date.now() + Math.random(),
+                text: text,
+                completed: false,
+                createdAt: new Date().toISOString()
+            };
+            
+            todos.push(newTodo);
+            input.value = '';
+            
+            renderTodos();
+            await saveTodos();
+        }
+
+        async function toggleTodo(index) {
+            todos[index].completed = !todos[index].completed;
+            renderTodos();
+            await saveTodos();
+        }
+
+        async function deleteTodo(index) {
+            todos.splice(index, 1);
+            renderTodos();
+            await saveTodos();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Event listeners
+        document.getElementById('todoInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTodo();
+            }
+        });
+
+        // Initialize app
+        loadTodos();
+
+        // Auto-refresh every 5 seconds to show collaborative updates
+        setInterval(loadTodos, 5000);
+    </script>
+</body>
+</html>
