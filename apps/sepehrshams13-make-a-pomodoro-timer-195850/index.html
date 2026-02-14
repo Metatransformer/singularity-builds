@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://*.execute-api.*.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #ff6b6b;
+        }
+
+        .timer-display {
+            font-size: 4rem;
+            font-weight: 300;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            color: #4ecdc4;
+        }
+
+        .session-type {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #a0a0a0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .settings {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .setting-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .setting-group label {
+            font-size: 0.9rem;
+            color: #a0a0a0;
+        }
+
+        .setting-group input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #fff;
+            width: 80px;
+            text-align: center;
+        }
+
+        .stats {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .timer-display {
+                font-size: 3rem;
+            }
+
+            .controls {
+                gap: 10px;
+            }
+
+            button {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍅 Pomodoro Timer</h1>
+        
+        <div class="session-type" id="sessionType">Work Session</div>
+        <div class="timer-display" id="timerDisplay">25:00</div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">Start</button>
+            <button id="pauseBtn" disabled>Pause</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+        
+        <div class="settings">
+            <div class="setting-group">
+                <label>Work Duration (min)</label>
+                <input type="number" id="workDuration" value="25" min="1" max="60">
+            </div>
+            <div class="setting-group">
+                <label>Short Break (min)</label>
+                <input type="number" id="shortBreak" value="5" min="1" max="30">
+            </div>
+            <div class="setting-group">
+                <label>Long Break (min)</label>
+                <input type="number" id="longBreak" value="15" min="1" max="60">
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="completedSessions">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalTime">0h 0m</div>
+                <div class="stat-label">Total Time</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SingularityDB {
+            constructor(namespace) {
+                this.namespace = namespace;
+                this.apiUrl = "https://your-api-gateway.execute-api.us-east-1.amazonaws.com/api/data";
+            }
+            async get(key) {
+                try {
+                    const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`);
+                    if (res.status === 404) return null;
+                    const data = await res.json();
+                    return data.value;
+                } catch (e) {
+                    return null;
+                }
+            }
+            async set(key, value) {
+                try {
+                    const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ value }),
+                    });
+                    return res.json();
+                } catch (e) {
+                    return null;
+                }
+            }
+            async delete(key) {
+                try {
+                    const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                        method: "DELETE",
+                    });
+                    return res.json();
+                } catch (e) {
+                    return null;
+                }
+            }
+        }
+
+        class PomodoroTimer {
+            constructor() {
+                this.db = new SingularityDB('sepehrshams13-make-a-pomodoro-timer-195850');
+                this.currentSession = 'work'; // 'work', 'shortBreak', 'longBreak'
+                this.timeLeft = 25 * 60; // in seconds
+                this.isRunning = false;
+                this.sessionCount = 0;
+                this.completedSessions = 0;
+                this.totalTimeSpent = 0;
+                this.interval = null;
+                this.originalTime = 25 * 60;
+                
+                this.initElements();
+                this.loadStats();
+                this.updateDisplay();
+                this.bindEvents();
+            }
+
+            initElements() {
+                this.timerDisplay = document.getElementById('timerDisplay');
+                this.sessionType = document.getElementById('sessionType');
+                this.progressFill = document.getElementById('progressFill');
+                this.startBtn = document.getElementById('startBtn');
+                this.pauseBtn = document.getElementById('pauseBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.workDuration = document.getElementById('workDuration');
+                this.shortBreak = document.getElementById('shortBreak');
+                this.longBreak = document.getElementById('longBreak');
+                this.completedSessionsEl = document.getElementById('completedSessions');
+                this.totalTimeEl = document.getElementById('totalTime');
+            }
+
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => this.start());
+                this.pauseBtn.addEventListener('click', () => this.pause());
+                this.resetBtn.addEventListener('click', () => this.reset());
+                
+                this.workDuration.addEventListener('change', () => this.updateDurations());
+                this.shortBreak.addEventListener('change', () => this.updateDurations());
+                this.longBreak.addEventListener('change', () => this.updateDurations());
+            }
+
+            start() {
+                this.isRunning = true;
+                this.startBtn.disabled = true;
+                this.pauseBtn.disabled = false;
+                
+                this.interval = setInterval(() => {
+                    this.timeLeft--;
+                    this.updateDisplay();
+                    
+                    if (this.timeLeft <= 0) {
+                        this.sessionComplete();
+                    }
+                }, 1000);
+            }
+
+            pause() {
+                this.isRunning = false;
+                this.startBtn.disabled = false;
+                this.pauseBtn.disabled = true;
+                
+                if (this.interval) {
+                    clearInterval(this.interval);
+                    this.interval = null;
+                }
+            }
+
+            reset() {
+                this.pause();
+                this.currentSession = 'work';
+                this.timeLeft = parseInt(this.workDuration.value) * 60;
+                this.originalTime = this.timeLeft;
+                this.updateDisplay();
+            }
+
+            sessionComplete() {
+                this.pause();
+                this.playNotification();
+                
+                // Update stats
+                this.totalTimeSpent += this.originalTime;
+                if (this.currentSession === 'work') {
+                    this.completedSessions++;
+                    this.sessionCount++;
+                }
+                
+                this.saveStats();
+                this.updateStatsDisplay();
+                
+                // Switch to next session
+                this.switchSession();
+            }
+
+            switchSession() {
+                if (this.currentSession === 'work') {
+                    // After 4 work sessions, take a long break
+                    if (this.sessionCount % 4 === 0) {
+                        this.currentSession = 'longBreak';
+                        this.timeLeft = parseInt(this.longBreak.value) * 60;
+                    } else {
+                        this.currentSession = 'shortBreak';
+                        this.timeLeft = parseInt(this.shortBreak.value) * 60;
+                    }
+                } else {
+                    this.currentSession = 'work';
+                    this.timeLeft = parseInt(this.workDuration.value) * 60;
+                }
+                
+                this.originalTime = this.timeLeft;
+                this.updateDisplay();
+            }
+
+            updateDurations() {
+                if (!this.isRunning && this.currentSession === 'work') {
+                    this.timeLeft = parseInt(this.workDuration.value) * 60;
+                    this.originalTime = this.timeLeft;
+                    this.updateDisplay();
+                }
+            }
+
+            updateDisplay() {
+                const minutes = Math.floor(this.timeLeft / 60);
+                const seconds = this.timeLeft % 60;
+                this.timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Update session type
+                const sessionNames = {
+                    'work': 'Work Session',
+                    'shortBreak': 'Short Break',
+                    'longBreak': 'Long Break'
+                };
+                this.sessionType.textContent = sessionNames[this.currentSession];
+                
+                // Update progress bar
+                const progress = ((this.originalTime - this.timeLeft) / this.originalTime) * 100;
+                this.progressFill.style.width = `${progress}%`;
+                
+                // Update document title
+                document.title = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} - Pomodoro Timer`;
+            }
+
+            updateStatsDisplay() {
+                this.completedSessionsEl.textContent = this.completedSessions;
+                
+                const totalHours = Math.floor(this.totalTimeSpent / 3600);
+                const totalMinutes = Math.floor((this.totalTimeSpent % 3600) / 60);
+                this.totalTimeEl.textContent = `${totalHours}h ${totalMinutes}m`;
+            }
+
+            playNotification() {
+                // Create a simple beep sound
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+                
+                // Show browser notification if permitted
+                if (Notification.permission === 'granted') {
+                    const sessionNames = {
+                        'work': 'Work session complete! Time for a break.',
+                        'shortBreak': 'Break over! Ready to work?',
+                        'longBreak': 'Long break finished! Let\'s get back to work.'
+                    };
+                    new Notification('Pomodoro Timer', {
+                        body: sessionNames[this.currentSession],
+                        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNmZjZiNmIiLz48L3N2Zz4='
+                    });
+                }
+            }
+
+            async loadStats() {
+                try {
+                    const stats = await this.db.get('stats');
+                    if (stats) {
+                        this.completedSessions = stats.completedSessions || 0;
+                        this.totalTimeSpent = stats.totalTimeSpent || 0;
+                        this.sessionCount = stats.sessionCount || 0;
+                        this.updateStatsDisplay();
+                    }
+                } catch (e) {
+                    console.log('Could not load stats from server, using local storage');
+                }
+            }
+
+            async saveStats() {
+                try {
+                    await this.db.set('stats', {
+                        completedSessions: this.completedSessions,
+                        totalTimeSpent: this.totalTimeSpent,
+                        sessionCount: this.sessionCount,
+                        lastUpdated: new Date().toISOString()
+                    });
+                } catch (e) {
+                    console.log('Could not save stats to server');
+                }
+            }
+        }
+
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Initialize the timer when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new PomodoroTimer();
+        });
+    </script>
+</body>
+</html>
