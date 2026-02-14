@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://*.execute-api.*.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base Token Deployment Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #4a9eff;
+            font-size: 2.5rem;
+            font-weight: 300;
+            text-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-title {
+            font-size: 1.2rem;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .status-message {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #b0b0b0;
+        }
+
+        .deployment-form {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a9eff;
+            font-weight: 500;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 10px rgba(74, 158, 255, 0.3);
+        }
+
+        button {
+            background: linear-gradient(45deg, #4a9eff, #2979ff);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(74, 158, 255, 0.3);
+        }
+
+        button:disabled {
+            background: rgba(255, 255, 255, 0.2);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .deployment-list {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+        }
+
+        .deployment-item {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .deployment-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .deployment-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .deployment-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #4a9eff;
+        }
+
+        .deployment-time {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .deployment-address {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #90caf9;
+            word-break: break-all;
+            margin-top: 5px;
+        }
+
+        .counter {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.5rem;
+            color: #4a9eff;
+        }
+
+        .limit-warning {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .success-message {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: #4caf50;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .deployment-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 Base Token Tracker</h1>
+        
+        <div class="status-card">
+            <div class="status-title">⚠️ Deployment Limit Reached</div>
+            <div class="status-message">
+                You've reached the maximum number of token deployments allowed in a 24-hour period on Base.
+                Track your deployments and plan for tomorrow!
+            </div>
+        </div>
+
+        <div class="counter">
+            <span id="deploymentCount">0</span> / 24 deployments today
+        </div>
+
+        <div id="limitWarning" class="limit-warning" style="display: none;">
+            🚫 Daily limit reached! Try again tomorrow.
+        </div>
+
+        <div id="successMessage" class="success-message">
+            ✅ Deployment logged successfully!
+        </div>
+
+        <div class="deployment-form">
+            <h3 style="margin-bottom: 20px; color: #4a9eff;">Log New Deployment</h3>
+            <form id="deploymentForm">
+                <div class="form-group">
+                    <label for="tokenName">Token Name</label>
+                    <input type="text" id="tokenName" required placeholder="e.g. MyAwesomeToken">
+                </div>
+                <div class="form-group">
+                    <label for="tokenSymbol">Token Symbol</label>
+                    <input type="text" id="tokenSymbol" required placeholder="e.g. MAT">
+                </div>
+                <div class="form-group">
+                    <label for="contractAddress">Contract Address</label>
+                    <input type="text" id="contractAddress" required placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="notes">Notes (Optional)</label>
+                    <textarea id="notes" rows="3" placeholder="Any additional notes about this deployment..."></textarea>
+                </div>
+                <button type="submit" id="submitBtn">Log Deployment</button>
+                <button type="button" id="resetCounterBtn">Reset Counter</button>
+            </form>
+        </div>
+
+        <div class="deployment-list">
+            <h3 style="margin-bottom: 20px; color: #4a9eff;">Today's Deployments</h3>
+            <div id="deploymentsList">
+                <div style="text-align: center; color: #888; padding: 20px;">
+                    No deployments logged yet today
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SingularityDB {
+            constructor(namespace) {
+                this.namespace = namespace;
+                this.apiUrl = "https://your-api-gateway.execute-api.us-east-1.amazonaws.com/api/data";
+            }
+            async get(key) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`);
+                if (res.status === 404) return null;
+                const data = await res.json();
+                return data.value;
+            }
+            async set(key, value) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ value }),
+                });
+                return res.json();
+            }
+            async delete(key) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                    method: "DELETE",
+                });
+                return res.json();
+            }
+            async list() {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}`);
+                return res.json();
+            }
+        }
+
+        const db = new SingularityDB('bankrbot-on-base-for-you-but-it-lo-077732');
+        const MAX_DEPLOYMENTS = 24;
+
+        let deployments = [];
+        let deploymentCount = 0;
+
+        function formatDate(timestamp) {
+            return new Date(timestamp).toLocaleString();
+        }
+
+        function getTodayKey() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        async function loadDeployments() {
+            try {
+                const todayKey = getTodayKey();
+                const todayDeployments = await db.get(`deployments-${todayKey}`);
+                
+                if (todayDeployments && Array.isArray(todayDeployments)) {
+                    deployments = todayDeployments;
+                    deploymentCount = deployments.length;
+                } else {
+                    deployments = [];
+                    deploymentCount = 0;
+                }
+                
+                updateUI();
+            } catch (error) {
+                console.error('Error loading deployments:', error);
+            }
+        }
+
+        async function saveDeployments() {
+            try {
+                const todayKey = getTodayKey();
+                await db.set(`deployments-${todayKey}`, deployments);
+            } catch (error) {
+                console.error('Error saving deployments:', error);
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('deploymentCount').textContent = deploymentCount;
+            
+            const limitWarning = document.getElementById('limitWarning');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (deploymentCount >= MAX_DEPLOYMENTS) {
+                limitWarning.style.display = 'block';
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Limit Reached';
+            } else {
+                limitWarning.style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Log Deployment';
+            }
+            
+            renderDeploymentsList();
+        }
+
+        function renderDeploymentsList() {
+            const listContainer = document.getElementById('deploymentsList');
+            
+            if (deployments.length === 0) {
+                listContainer.innerHTML = `
+                    <div style="text-align: center; color: #888; padding: 20px;">
+                        No deployments logged yet today
+                    </div>
+                `;
+                return;
+            }
+            
+            listContainer.innerHTML = deployments.map((deployment, index) => `
+                <div class="deployment-item">
+                    <div class="deployment-header">
+                        <div class="deployment-name">${deployment.name} (${deployment.symbol})</div>
+                        <div class="deployment-time">${formatDate(deployment.timestamp)}</div>
+                    </div>
+                    <div class="deployment-address">${deployment.address}</div>
+                    ${deployment.notes ? `<div style="margin-top: 10px; color: #b0b0b0; font-style: italic;">${deployment.notes}</div>` : ''}
+                    <button onclick="removeDeployment(${index})" style="background: #ff6b6b; margin-top: 10px; font-size: 0.9rem; padding: 8px 16px;">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        async function addDeployment(name, symbol, address, notes) {
+            if (deploymentCount >= MAX_DEPLOYMENTS) {
+                return false;
+            }
+            
+            const deployment = {
+                name,
+                symbol,
+                address,
+                notes: notes || '',
+                timestamp: Date.now()
+            };
+            
+            deployments.unshift(deployment);
+            deploymentCount++;
+            
+            await saveDeployments();
+            updateUI();
+            
+            showSuccessMessage();
+            return true;
+        }
+
+        async function removeDeployment(index) {
+            deployments.splice(index, 1);
+            deploymentCount = deployments.length;
+            
+            await saveDeployments();
+            updateUI();
+        }
+
+        async function resetCounter() {
+            deployments = [];
+            deploymentCount = 0;
+            
+            await saveDeployments();
+            updateUI();
+        }
+
+        function showSuccessMessage() {
+            const message = document.getElementById('successMessage');
+            message.style.display = 'block';
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 3000);
+        }
+
+        document.getElementById('deploymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('tokenName').value;
+            const symbol = document.getElementById('tokenSymbol').value;
+            const address = document.getElementById('contractAddress').value;
+            const notes = document.getElementById('notes').value;
+            
+            const success = await addDeployment(name, symbol, address, notes);
+            
+            if (success) {
+                e.target.reset();
+            }
+        });
+
+        document.getElementById('resetCounterBtn').addEventListener('click', async () => {
+            if (confirm('Are you sure you want to reset the deployment counter? This will clear all logged deployments for today.')) {
+                await resetCounter();
+            }
+        });
+
+        window.removeDeployment = removeDeployment;
+
+        loadDeployments();
+    </script>
+</body>
+</html>
