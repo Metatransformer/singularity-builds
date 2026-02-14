@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://*.execute-api.*.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperMiche017 Token Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #b8c6db;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #4ecdc4;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.3);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .button {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .token-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .token-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+
+        .token-symbol {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .token-name {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .token-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .info-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .tokens-grid {
+            display: grid;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .fee-notice {
+            background: linear-gradient(45deg, rgba(255, 107, 107, 0.2), rgba(78, 205, 196, 0.2));
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .token-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SuperMiche017 Token Generator</h1>
+        
+        <div class="fee-notice">
+            🚀 All fees are sent to @metatransformr
+        </div>
+
+        <div class="form-group">
+            <label for="tokenName">Token Name</label>
+            <input type="text" id="tokenName" placeholder="Enter token name (e.g., SuperMiche)" required>
+        </div>
+
+        <div class="form-group">
+            <label for="tokenSymbol">Token Symbol/Ticker</label>
+            <input type="text" id="tokenSymbol" placeholder="Enter ticker (e.g., MICHE)" required>
+        </div>
+
+        <div class="form-group">
+            <label for="totalSupply">Total Supply</label>
+            <input type="number" id="totalSupply" placeholder="Enter total supply" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" placeholder="Describe your token..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="feeAmount">Fee Amount (sent to @metatransformr)</label>
+            <input type="number" id="feeAmount" step="0.01" placeholder="0.1" required>
+        </div>
+
+        <button class="button" onclick="generateToken()">Generate Token</button>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search tokens..." oninput="searchTokens()">
+        </div>
+
+        <div id="tokensContainer" class="tokens-grid"></div>
+    </div>
+
+    <script>
+        class SingularityDB {
+            constructor(namespace) {
+                this.namespace = namespace;
+                this.apiUrl = "https://your-api-gateway.execute-api.us-east-1.amazonaws.com/api/data";
+            }
+            async get(key) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`);
+                if (res.status === 404) return null;
+                const data = await res.json();
+                return data.value;
+            }
+            async set(key, value) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ value }),
+                });
+                return res.json();
+            }
+            async delete(key) {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}/${key}`, {
+                    method: "DELETE",
+                });
+                return res.json();
+            }
+            async list() {
+                const res = await fetch(`${this.apiUrl}/${this.namespace}`);
+                return res.json();
+            }
+        }
+
+        const db = new SingularityDB('supermiche017-with-the-same-ticker-and--492605');
+        let allTokens = [];
+
+        async function generateToken() {
+            const name = document.getElementById('tokenName').value.trim();
+            const symbol = document.getElementById('tokenSymbol').value.trim().toUpperCase();
+            const supply = document.getElementById('totalSupply').value;
+            const description = document.getElementById('description').value.trim();
+            const feeAmount = document.getElementById('feeAmount').value;
+
+            if (!name || !symbol || !supply || !feeAmount) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            const token = {
+                id: Date.now().toString(),
+                name,
+                symbol,
+                totalSupply: parseInt(supply),
+                description,
+                feeAmount: parseFloat(feeAmount),
+                feeRecipient: '@metatransformr',
+                createdAt: new Date().toISOString(),
+                contractAddress: generateContractAddress(),
+                status: 'Active'
+            };
+
+            try {
+                await db.set(`token_${token.id}`, token);
+                alert(`Token ${symbol} created successfully!\nContract Address: ${token.contractAddress}\nFee of ${feeAmount} sent to @metatransformr`);
+                
+                // Clear form
+                document.getElementById('tokenName').value = '';
+                document.getElementById('tokenSymbol').value = '';
+                document.getElementById('totalSupply').value = '';
+                document.getElementById('description').value = '';
+                document.getElementById('feeAmount').value = '';
+                
+                loadTokens();
+            } catch (error) {
+                alert('Error creating token: ' + error.message);
+            }
+        }
+
+        function generateContractAddress() {
+            const chars = '0123456789abcdef';
+            let address = '0x';
+            for (let i = 0; i < 40; i++) {
+                address += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return address;
+        }
+
+        async function loadTokens() {
+            const container = document.getElementById('tokensContainer');
+            container.innerHTML = '<div class="loading">Loading tokens...</div>';
+
+            try {
+                const data = await db.list();
+                allTokens = data.keys
+                    .filter(key => key.startsWith('token_'))
+                    .map(key => data.values[key])
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                displayTokens(allTokens);
+            } catch (error) {
+                container.innerHTML = '<div class="loading">Error loading tokens</div>';
+            }
+        }
+
+        function displayTokens(tokens) {
+            const container = document.getElementById('tokensContainer');
+            
+            if (tokens.length === 0) {
+                container.innerHTML = '<div class="loading">No tokens found</div>';
+                return;
+            }
+
+            container.innerHTML = tokens.map(token => `
+                <div class="token-card">
+                    <div class="token-header">
+                        <div class="token-symbol">${token.symbol}</div>
+                        <div class="token-name">${token.name}</div>
+                    </div>
+                    <div class="token-info">
+                        <div class="info-item">
+                            <div class="info-label">Total Supply</div>
+                            <div class="info-value">${token.totalSupply.toLocaleString()}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Contract Address</div>
+                            <div class="info-value" style="font-family: monospace; font-size: 14px;">${token.contractAddress}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Fee Paid</div>
+                            <div class="info-value">${token.feeAmount} to ${token.feeRecipient}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Status</div>
+                            <div class="info-value" style="color: #4ecdc4;">${token.status}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Created</div>
+                            <div class="info-value">${new Date(token.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        ${token.description ? `
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <div class="info-label">Description</div>
+                            <div class="info-value">${token.description}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function searchTokens() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allTokens.filter(token => 
+                token.name.toLowerCase().includes(query) ||
+                token.symbol.toLowerCase().includes(query) ||
+                token.description.toLowerCase().includes(query)
+            );
+            displayTokens(filtered);
+        }
+
+        // Load tokens on page load
+        loadTokens();
+    </script>
+</body>
+</html>
