@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tron Lightcycle</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000810; color: #0ff; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+  h1 { font-size: 2.5rem; margin: 20px 0 5px; text-shadow: 0 0 20px #0ff, 0 0 40px #0ff; letter-spacing: 10px; }
+  .subtitle { color: #066; font-size: 0.8rem; margin-bottom: 10px; }
+  .score-bar { display: flex; gap: 40px; margin: 10px 0; font-size: 1rem; }
+  .score-bar .player { color: #0ff; } .score-bar .ai { color: #f80; }
+  canvas { border: 2px solid #0ff; box-shadow: 0 0 30px rgba(0,255,255,0.2); display: block; }
+  #game-area { position: relative; }
+  #overlay { position: absolute; top: 0; left: 0; width: 500px; height: 500px; background: rgba(0,8,16,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+  #overlay.hidden { display: none; }
+  #overlay h2 { font-size: 2rem; margin-bottom: 10px; text-shadow: 0 0 20px #0ff; }
+  #overlay p { margin: 5px; }
+  button { background: transparent; color: #0ff; border: 2px solid #0ff; padding: 10px 30px; font-family: inherit; font-size: 1rem; cursor: pointer; margin-top: 15px; transition: 0.2s; }
+  button:hover { background: #0ff; color: #000; box-shadow: 0 0 25px #0ff; }
+  .controls-hint { color: #223; font-size: 0.7rem; margin-top: 10px; }
+  .round-info { font-size: 0.9rem; color: #088; }
+</style>
+</head>
+<body>
+<h1>TRON</h1>
+<p class="subtitle">⚡ LIGHTCYCLE ARENA ⚡</p>
+<div class="score-bar">
+  <span class="player">PLAYER: <span id="p-wins">0</span></span>
+  <span class="round-info">ROUND <span id="round">1</span></span>
+  <span class="ai">AI: <span id="a-wins">0</span></span>
+</div>
+<div id="game-area">
+  <canvas id="c" width="500" height="500"></canvas>
+  <div id="overlay">
+    <h2 id="overlay-title">TRON LIGHTCYCLE</h2>
+    <p id="overlay-msg">Arrow keys / WASD to steer</p>
+    <p id="overlay-sub">Outlast the AI opponent</p>
+    <button id="start-btn">ENTER THE GRID</button>
+  </div>
+</div>
+<p class="controls-hint">Arrow keys / WASD to turn • Don't hit walls or trails</p>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const W = 500, CELL = 5, GRID = W / CELL;
+let player, ai, pDir, aDir, grid, alive, loop, pWins = 0, aWins = 0, round = 1, countdown;
+
+const DIRS = {up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
+const opposite = d => ({x:-d.x, y:-d.y});
+
+function init() {
+  grid = Array.from({length:GRID}, () => new Uint8Array(GRID)); // 0=empty, 1=player, 2=ai
+  player = {x: 20, y: GRID/2}; ai = {x: GRID-21, y: GRID/2};
+  pDir = {x:1,y:0}; aDir = {x:-1,y:0};
+  alive = {p:true, a:true};
+  grid[player.x][player.y] = 1; grid[ai.x][ai.y] = 2;
+}
+
+function isBlocked(x,y) { return x<0||x>=GRID||y<0||y>=GRID||grid[x][y]!==0; }
+
+function aiThink() {
+  // Look-ahead AI: avoid walls/trails, prefer open space
+  const dirs = [aDir, {x:aDir.y,y:-aDir.x}, {x:-aDir.y,y:aDir.x}]; // straight, left, right
+  let best = null, bestScore = -1;
+  for (const d of dirs) {
+    const nx = ai.x+d.x, ny = ai.y+d.y;
+    if (isBlocked(nx,ny)) continue;
+    // Count open cells in a cone ahead
+    let openness = 0;
+    for (let dist = 1; dist <= 15; dist++) {
+      const fx = nx+d.x*dist, fy = ny+d.y*dist;
+      if (isBlocked(fx,fy)) break;
+      openness += dist;
+    }
+    // Also check sides
+    for (const sd of [{x:d.y,y:-d.x},{x:-d.y,y:d.x}]) {
+      for (let dist = 1; dist <= 8; dist++) {
+        if (isBlocked(nx+sd.x*dist, ny+sd.y*dist)) break;
+        openness += 1;
+      }
+    }
+    // Slight aggression: move toward player when safe
+    const toPx = player.x - nx, toPy = player.y - ny;
+    const playerDist = Math.abs(toPx) + Math.abs(toPy);
+    if (playerDist < 30) openness += (30-playerDist) * 0.3;
+    if (openness > bestScore) { bestScore = openness; best = d; }
+  }
+  if (best) aDir = best;
+}
+
+function step() {
+  aiThink();
+  const pnx = player.x+pDir.x, pny = player.y+pDir.y;
+  const anx = ai.x+aDir.x, any = ai.y+aDir.y;
+  const pDead = isBlocked(pnx,pny);
+  const aDead = isBlocked(anx,any);
+  if (pDead) alive.p = false;
+  if (aDead) alive.a = false;
+  if (!pDead) { player.x=pnx; player.y=pny; grid[pnx][pny]=1; }
+  if (!aDead) { ai.x=anx; ai.y=any; grid[anx][any]=2; }
+  // Head-on collision
+  if (player.x===ai.x && player.y===ai.y) { alive.p=false; alive.a=false; }
+  draw();
+  if (!alive.p || !alive.a) endRound();
+}
+
+function draw() {
+  ctx.fillStyle = "#000810"; ctx.fillRect(0,0,W,W);
+  // Grid lines
+  ctx.strokeStyle = "#0a1520"; ctx.lineWidth = 0.5;
+  for (let i=0;i<GRID;i+=10){ctx.beginPath();ctx.moveTo(i*CELL,0);ctx.lineTo(i*CELL,W);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*CELL);ctx.lineTo(W,i*CELL);ctx.stroke();}
+  // Trails
+  for (let x=0;x<GRID;x++) for (let y=0;y<GRID;y++) {
+    if (grid[x][y]===1) { ctx.fillStyle="rgba(0,255,255,0.4)"; ctx.fillRect(x*CELL,y*CELL,CELL,CELL); }
+    else if (grid[x][y]===2) { ctx.fillStyle="rgba(255,136,0,0.4)"; ctx.fillRect(x*CELL,y*CELL,CELL,CELL); }
+  }
+  // Heads (glow)
+  if (alive.p) {
+    ctx.shadowColor="#0ff"; ctx.shadowBlur=20; ctx.fillStyle="#0ff";
+    ctx.fillRect(player.x*CELL-1,player.y*CELL-1,CELL+2,CELL+2);
+  }
+  if (alive.a) {
+    ctx.shadowColor="#f80"; ctx.shadowBlur=20; ctx.fillStyle="#f80";
+    ctx.fillRect(ai.x*CELL-1,ai.y*CELL-1,CELL+2,CELL+2);
+  }
+  ctx.shadowBlur=0;
+}
+
+function endRound() {
+  clearInterval(loop);
+  let msg;
+  if (!alive.p && !alive.a) msg = "DRAW!";
+  else if (!alive.p) { aWins++; msg = "AI WINS"; }
+  else { pWins++; msg = "YOU WIN!"; }
+  document.getElementById("p-wins").textContent = pWins;
+  document.getElementById("a-wins").textContent = aWins;
+  const overlay = document.getElementById("overlay");
+  overlay.classList.remove("hidden");
+  document.getElementById("overlay-title").textContent = msg;
+  document.getElementById("overlay-msg").textContent = `Player ${pWins} — ${aWins} AI`;
+  document.getElementById("overlay-sub").textContent = "";
+  document.getElementById("start-btn").textContent = "NEXT ROUND";
+}
+
+function startGame() {
+  round++;
+  document.getElementById("round").textContent = round;
+  document.getElementById("overlay").classList.add("hidden");
+  init(); draw();
+  loop = setInterval(step, 40);
+}
+
+document.addEventListener("keydown", e => {
+  const map = {ArrowUp:DIRS.up,ArrowDown:DIRS.down,ArrowLeft:DIRS.left,ArrowRight:DIRS.right,w:DIRS.up,s:DIRS.down,a:DIRS.left,d:DIRS.right};
+  const d = map[e.key];
+  if (d && !(d.x===-pDir.x && d.y===-pDir.y)) { pDir=d; e.preventDefault(); }
+  if (e.key===" ") { startGame(); e.preventDefault(); }
+});
+
+// Touch
+let ts=null;
+canvas.addEventListener("touchstart",e=>{ts={x:e.touches[0].clientX,y:e.touches[0].clientY};e.preventDefault();});
+canvas.addEventListener("touchend",e=>{
+  if(!ts)return;const dx=e.changedTouches[0].clientX-ts.x,dy=e.changedTouches[0].clientY-ts.y;
+  if(Math.abs(dx)+Math.abs(dy)<20)return;
+  const d=Math.abs(dx)>Math.abs(dy)?{x:dx>0?1:-1,y:0}:{x:0,y:dy>0?1:-1};
+  if(!(d.x===-pDir.x&&d.y===-pDir.y))pDir=d;
+});
+
+document.getElementById("start-btn").addEventListener("click", startGame);
+init(); draw();
+</script>
+</body>
+</html>
