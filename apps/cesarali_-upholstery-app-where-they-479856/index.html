@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "cesarali_-upholstery-app-where-they-479856";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite Upholstery - Furniture Repair Booking</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --accent: #00d4ff;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --border: #333;
+            --success: #00ff88;
+            --error: #ff4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            display: grid;
+            place-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            opacity: 0;
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-primary));
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+        }
+
+        .form-section {
+            background: var(--bg-secondary);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        input, textarea, select {
+            background: var(--bg-primary);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .file-upload {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            background: var(--bg-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover {
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .file-upload input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .file-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .file-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .file-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+        }
+
+        .file-name {
+            padding: 8px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        .remove-file {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: var(--error);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent), #0099cc);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 50px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.error {
+            background: var(--error);
+        }
+
+        .bookings-section {
+            margin-top: 40px;
+        }
+
+        .booking-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .booking-id {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .booking-date {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .booking-details {
+            display: grid;
+            gap: 10px;
+        }
+
+        .detail-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            min-width: 100px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .form-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>🪑 Elite Upholstery</h1>
+            <p class="subtitle">Professional Furniture Repair & Restoration</p>
+        </header>
+
+        <div class="form-section">
+            <h2 class="section-title">
+                📅 Book Your Appointment
+            </h2>
+            <form id="bookingForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="name">Full Name *</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number *</label>
+                        <input type="tel" id="phone" name="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Preferred Date *</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="time">Preferred Time *</label>
+                        <select id="time" name="time" required>
+                            <option value="">Select time</option>
+                            <option value="9:00 AM">9:00 AM</option>
+                            <option value="10:00 AM">10:00 AM</option>
+                            <option value="11:00 AM">11:00 AM</option>
+                            <option value="12:00 PM">12:00 PM</option>
+                            <option value="1:00 PM">1:00 PM</option>
+                            <option value="2:00 PM">2:00 PM</option>
+                            <option value="3:00 PM">3:00 PM</option>
+                            <option value="4:00 PM">4:00 PM</option>
+                            <option value="5:00 PM">5:00 PM</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="furniture-type">Furniture Type *</label>
+                        <select id="furniture-type" name="furnitureType" required>
+                            <option value="">Select type</option>
+                            <option value="Sofa">Sofa</option>
+                            <option value="Chair">Chair</option>
+                            <option value="Ottoman">Ottoman</option>
+                            <option value="Cushions">Cushions</option>
+                            <option value="Dining Chairs">Dining Chairs</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="address">Service Address *</label>
+                        <textarea id="address" name="address" placeholder="Enter your full address where service is needed..." required></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="description">Describe the Issue *</label>
+                        <textarea id="description" name="description" placeholder="Please describe the damage, wear, or repair needed..." required></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Upload Photos of Your Furniture *</label>
+                        <div class="file-upload" id="fileUpload">
+                            <input type="file" id="photos" name="photos" multiple accept="image/*" required>
+                            <div class="upload-icon">📷</div>
+                            <div class="upload-text">
+                                <strong>Click to upload photos</strong><br>
+                                <small>or drag and drop images here</small><br>
+                                <small>Multiple photos help us provide better estimates</small>
+                            </div>
+                        </div>
+                        <div class="file-preview" id="filePreview"></div>
+                    </div>
+                </div>
+                <button type="submit" class="btn" id="submitBtn">
+                    📧 Send Booking Request
+                </button>
+            </form>
+        </div>
+
+        <div class="bookings-section">
+            <h2 class="section-title">📋 Your Bookings</h2>
+            <div id="bookingsList"></div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let selectedFiles = [];
+        
+        async function init() {
+            // Set minimum date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('date').min = today;
+            
+            // Setup file upload
+            setupFileUpload();
+            
+            // Load existing bookings
+            await loadBookings();
+            
+            // Setup form submission
+            document.getElementById('bookingForm').addEventListener('submit', handleSubmit);
+            
+            // Hide loader
+            setTimeout(() => {
+                document.getElementById('loader').classList.add('hidden');
+            }, 500);
+        }
+
+        function setupFileUpload() {
+            const fileInput = document.getElementById('photos');
+            const uploadArea = document.getElementById('fileUpload');
+            
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#00d4ff';
+                uploadArea.style.background = 'rgba(0, 212, 255, 0.1)';
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#333';
+                uploadArea.style.background = '#0a0a0a';
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#333';
+                uploadArea.style.background = '#0a0a0a';
+                handleFiles(e.dataTransfer.files);
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+            });
+        }
+
+        function handleFiles(files) {
+            for (let file of files) {
+                if (file.type.startsWith('image/')) {
+                    selectedFiles.push(file);
+                }
+            }
+            updateFilePreview();
+        }
+
+        function updateFilePreview() {
+            const preview = document.getElementById('filePreview');
+            preview.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                
+                const fileName = document.createElement('div');
+                fileName.className = 'file-name';
+                fileName.textContent = file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-file';
+                removeBtn.innerHTML = '×';
+                removeBtn.onclick = () => {
+                    selectedFiles.splice(index, 1);
+                    updateFilePreview();
+                };
+                
+                fileItem.appendChild(img);
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(removeBtn);
+                preview.appendChild(fileItem);
+            });
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            if (selectedFiles.length === 0) {
+                showToast('Please upload at least one photo of your furniture', 'error');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.innerHTML = '📤 Sending...';
+            submitBtn.disabled = true;
+            
+            try {
+                const formData = new FormData(e.target);
+                const bookingData = {
+                    id: 'BOOK-' + Date.now(),
+                    name: formData.get('name'),
+                    email: formData.get('email'),
+                    phone: formData.get('phone'),
+                    date: formData.get('date'),
+                    time: formData.get('time'),
+                    furnitureType: formData.get('furnitureType'),
+                    address: formData.get('address'),
+                    description: formData.get('description'),
+                    photos: selectedFiles.map(f => f.name),
+                    createdAt: new Date().toISOString(),
+                    status: 'pending'
+                };
+                
+                // Save to database
+                const existingBookings = await db.get('bookings') || [];
+                existingBookings.push(bookingData);
+                await db.set('bookings', existingBookings);
+                
+                // Create email content
+                const emailContent = `
+New Upholstery Booking Request
+
+Customer Information:
+- Name: ${bookingData.name}
+- Email: ${bookingData.email}
+- Phone: ${bookingData.phone}
+
+Appointment Details:
+- Preferred Date: ${bookingData.date}
+- Preferred Time: ${bookingData.time}
+- Furniture Type: ${bookingData.furnitureType}
+
+Service Address:
+${bookingData.address}
+
+Issue Description:
+${bookingData.description}
+
+Booking ID: ${bookingData.id}
+
+Note: Customer has uploaded ${selectedFiles.length} photo(s) of the furniture. Photos would normally be attached to this email.
+                `;
+                
+                // Simulate sending email (in a real app, you'd integrate with an email service)
+                console.log('Email content:', emailContent);
+                console.log('Attached files:', selectedFiles);
+                
+                showToast('Booking request sent successfully! We\'ll contact you soon.', 'success');
+                
+                // Reset form
+                e.target.reset();
+                selectedFiles = [];
+                updateFilePreview();
+                
+                // Reload bookings
+                await loadBookings();
+                
+            } catch (error) {
+                console.error('Error submitting booking:', error);
+                showToast('Error sending booking request. Please try again.', 'error');
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+
+        async function loadBookings() {
+            try {
+                const bookings = await db.get('bookings') || [];
+                const bookingsList = document.getElementById('bookingsList');
+                
+                if (bookings.length === 0) {
+                    bookingsList.innerHTML = `
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                            </svg>
+                            <h3>No bookings yet</h3>
+                            <p>Your booking requests will appear here</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                bookingsList.innerHTML = bookings
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                    .map(booking => `
+                        <div class="booking-card">
+                            <div class="booking-header">
+                                <div class="booking-id">${booking.id}</div>
+                                <div class="booking-date">${new Date(booking.createdAt).toLocaleDateString()}</div>
+                            </div>
+                            <div class="booking-details">
+                                <div class="detail-row">
+                                    <span class="detail-label">Customer:</span>
+                                    <span>${booking.name}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Date/Time:</span>
+                                    <span>${booking.date} at ${booking.time}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Furniture:</span>
+                                    <span>${booking.furnitureType}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Status:</span>
+                                    <span style="color: #ff9500; font-weight: 600;">Pending Review</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Photos:</span>
+                                    <span>${booking.photos.length} uploaded</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+            }
+        }
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
