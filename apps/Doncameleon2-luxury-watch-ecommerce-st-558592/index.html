@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "Doncameleon2-luxury-watch-ecommerce-st-558592";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronos Luxury - Premium Timepieces</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #2a2a2a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --accent: #00d4ff;
+            --gold: #ffd700;
+            --success: #00ff88;
+            --error: #ff4444;
+            --border: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .loading {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: var(--bg-primary);
+            z-index: 10000;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gold);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--accent);
+        }
+
+        .cart-btn {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .cart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--error);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.8rem;
+            display: grid;
+            place-items: center;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            padding: 4rem 0;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 4rem);
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, var(--gold), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .filters {
+            background: var(--bg-secondary);
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .filter-btn {
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .filter-btn:hover:not(.active) {
+            border-color: var(--accent);
+        }
+
+        .search-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            width: 200px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        main {
+            padding: 2rem 0;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .product-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 212, 255, 0.2);
+            border-color: var(--accent);
+        }
+
+        .product-image {
+            height: 250px;
+            background: linear-gradient(45deg, #333, #666);
+            display: grid;
+            place-items: center;
+            font-size: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-image::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .product-info {
+            padding: 1.5rem;
+        }
+
+        .product-brand {
+            color: var(--gold);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .product-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .add-to-cart {
+            width: 100%;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .add-to-cart:hover {
+            background: #00bae6;
+            transform: translateY(-2px);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 0;
+            color: var(--text-secondary);
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.5rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            color: var(--accent);
+            background: var(--bg-secondary);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .cart-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .cart-item-brand {
+            color: var(--gold);
+            font-size: 0.9rem;
+        }
+
+        .cart-item-price {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+        }
+
+        .cart-item-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+
+        .quantity-controls {
+            display: flex;
+            gap: 0.25rem;
+            align-items: center;
+        }
+
+        .qty-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .qty-btn:hover {
+            border-color: var(--accent);
+        }
+
+        .quantity {
+            padding: 0.25rem 0.5rem;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .remove-btn {
+            background: var(--error);
+            border: none;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .remove-btn:hover {
+            background: #dd3333;
+        }
+
+        .cart-total {
+            border-top: 2px solid var(--accent);
+            padding-top: 1rem;
+            margin-top: 1rem;
+            text-align: right;
+        }
+
+        .total-amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .checkout-btn {
+            width: 100%;
+            background: var(--success);
+            color: var(--bg-primary);
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .checkout-btn:hover {
+            background: #00dd77;
+            transform: translateY(-2px);
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--success);
+            color: var(--bg-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 10000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                gap: 1rem;
+            }
+
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group {
+                flex-wrap: wrap;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cart-item {
+                flex-direction: column;
+            }
+
+            .cart-item-actions {
+                align-items: flex-start;
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <header>
+        <nav class="container">
+            <a href="#" class="logo">⌚ Chronos Luxury</a>
+            <div class="nav-links">
+                <a href="#" class="nav-link">Collections</a>
+                <a href="#" class="nav-link">Brands</a>
+                <a href="#" class="nav-link">About</a>
+                <button class="cart-btn" onclick="openCart()">
+                    Cart
+                    <span class="cart-count" id="cartCount">0</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Timeless Elegance</h1>
+            <p>Discover the world's finest luxury timepieces. Each watch is a masterpiece of precision, craftsmanship, and enduring style.</p>
+        </div>
+    </section>
+
+    <section class="filters">
+        <div class="container">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <span>Brand:</span>
+                    <button class="filter-btn active" data-filter="brand" data-value="all">All</button>
+                    <button class="filter-btn" data-filter="brand" data-value="Rolex">Rolex</button>
+                    <button class="filter-btn" data-filter="brand" data-value="Patek Philippe">Patek Philippe</button>
+                    <button class="filter-btn" data-filter="brand" data-value="Omega">Omega</button>
+                    <button class="filter-btn" data-filter="brand" data-value="Audemars Piguet">Audemars Piguet</button>
+                </div>
+                <div class="filter-group">
+                    <span>Price:</span>
+                    <button class="filter-btn active" data-filter="price" data-value="all">All</button>
+                    <button class="filter-btn" data-filter="price" data-value="0-50000">Under $50k</button>
+                    <button class="filter-btn" data-filter="price" data-value="50000-100000">$50k - $100k</button>
+                    <button class="filter-btn" data-filter="price" data-value="100000-999999">$100k+</button>
+                </div>
+                <input type="text" class="search-box" placeholder="Search watches..." id="searchInput">
+            </div>
+        </div>
+    </section>
+
+    <main class="container">
+        <div class="products-grid" id="productsGrid">
+            <!-- Products will be loaded here -->
+        </div>
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <h3>No watches found</h3>
+            <p>Try adjusting your filters or search terms</p>
+        </div>
+    </main>
+
+    <div class="modal" id="cartModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Shopping Cart</h2>
+                <button class="close-btn" onclick="closeCart()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="cartItems">
+                    <!-- Cart items will be loaded here -->
+                </div>
+                <div class="cart-total" id="cartTotal" style="display: none;">
+                    <div>Total: <span class="total-amount" id="totalAmount">$0</span></div>
+                    <button class="checkout-btn" onclick="checkout()">Proceed to Checkout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        const watches = [
+            {
+                id: 1,
+                brand: "Rolex",
+                name: "Submariner Date",
+                description: "The archetypal diving watch, the Submariner is robustly built and perfectly proportioned.",
+                price: 85000,
+                image: "🌊"
+            },
+            {
+                id: 2,
+                brand: "Patek Philippe",
+                name: "Nautilus",
+                description: "An icon of casual elegance, the Nautilus combines exceptional craftsmanship with contemporary design.",
+                price: 125000,
+                image: "⚓"
+            },
+            {
+                id: 3,
+                brand: "Omega",
+                name: "Speedmaster Professional",
+                description: "The legendary moonwatch, worn by astronauts during all six lunar landing missions.",
+                price: 45000,
+                image: "🚀"
+            },
+            {
+                id: 4,
+                brand: "Audemars Piguet",
+                name: "Royal Oak",
+                description: "A revolutionary luxury sports watch with its distinctive octagonal bezel and integrated bracelet.",
+                price: 95000,
+                image: "👑"
+            },
+            {
+                id: 5,
+                brand: "Rolex",
+                name: "Daytona",
+                description: "The ultimate racing chronograph, designed to meet the demands of professional drivers.",
+                price: 110000,
+                image: "🏁"
+            },
+            {
+                id: 6,
+                brand: "Patek Philippe",
+                name: "Calatrava",
+                description: "The essence of timeless elegance and pure horological artistry in its simplest form.",
+                price: 75000,
+                image: "✨"
+            },
+            {
+                id: 7,
+                brand: "Omega",
+                name: "Seamaster Planet Ocean",
+                description: "Professional diving watch capable of withstanding pressures found at depths of 600 meters.",
+                price: 35000,
+                image: "🌊"
+            },
+            {
+                id: 8,
+                brand: "Audemars Piguet",
+                name: "Royal Oak Offshore",
+                description: "Bold evolution of the Royal Oak, designed for those who demand more from their timepiece.",
+                price: 115000,
+                image: "⚡"
+            }
+        ];
+
+        let cart = [];
+        let filters = {
+            brand: 'all',
+            price: 'all',
+            search: ''
+        };
+
+        async function init() {
+            try {
+                // Load cart from database
+                const savedCart = await db.get('cart') || [];
+                cart = savedCart;
+                updateCartUI();
+                
+                // Set up event listeners
+                setupEventListeners();
+                
+                // Render products
+                renderProducts();
+                
+                // Hide loading screen
+                setTimeout(() => {
+                    document.getElementById('loading').classList.add('hidden');
+                }, 1000);
+            } catch (error) {
+                console.error('Failed to initialize app:', error);
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        function setupEventListeners() {
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const filterType = e.target.dataset.filter;
+                    const filterValue = e.target.dataset.value;
+                    
+                    // Update active state
+                    document.querySelectorAll(`[data-filter="${filterType}"]`).forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    // Update filters
+                    filters[filterType] = filterValue;
+                    renderProducts();
+                });
+            });
+
+            // Search input
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                filters.search = e.target.value.toLowerCase();
+                renderProducts();
+            });
+
+            // Modal close on background click
+            document.getElementById('cartModal').addEventListener('click', (e) => {
+                if (e.target.id === 'cartModal') {
+                    closeCart();
+                }
+            });
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('productsGrid');
+            const emptyState = document.getElementById('emptyState');
+            
+            // Filter products
+            let filteredWatches = watches.filter(watch => {
+                // Brand filter
+                if (filters.brand !== 'all' && watch.brand !== filters.brand) {
+                    return false;
+                }
+                
+                // Price filter
+                if (filters.price !== 'all') {
+                    const [min, max] = filters.price.split('-').map(Number);
+                    if (watch.price < min || (max && watch.price > max)) {
+                        return false;
+                    }
+                }
+                
+                // Search filter
+                if (filters.search && !watch.name.toLowerCase().includes(filters.search) && 
+                    !watch.brand.toLowerCase().includes(filters.search)) {
+                    return false;
+                }
+                
+                return true;
+            });
+
+            if (filteredWatches.length === 0) {
+                grid.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            grid.style.display = 'grid';
+            emptyState.style.display = 'none';
+
+            grid.innerHTML = filteredWatches.map(watch => `
+                <div class="product-card">
+                    <div class="product-image">${watch.image}</div>
+                    <div class="product-info">
+                        <div class="product-brand">${watch.brand}</div>
+                        <div class="product-name">${watch.name}</div>
+                        <div class="product-description">${watch.description}</div>
+                        <div class="product-price">$${watch.price.toLocaleString()}</div>
+                        <button class="add-to-cart" onclick="addToCart(${watch.id})">
+                            Add to Cart
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addToCart(watchId) {
+            const watch = watches.find(w => w.id === watchId);
+            if (!watch) return;
+
+            const existingItem = cart.find(item => item.id === watchId);
+            
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ ...watch, quantity: 1 });
+            }
+
+            await saveCart();
+            updateCartUI();
+            showToast(`${watch.name} added to cart`);
+        }
+
+        async function removeFromCart(watchId) {
+            cart = cart.filter(item => item.id !== watchId);
+            await saveCart();
+            updateCartUI();
+            renderCartItems();
+        }
+
+        async function updateQuantity(watchId, change) {
+            const item = cart.find(item => item.id === watchId);
+            if (!item) return;
+
+            item.quantity += change;
+            
+            if (item.quantity <= 0) {
+                await removeFromCart(watchId);
+                return;
+            }
+
+            await saveCart();
+            updateCartUI();
+            renderCartItems();
+        }
+
+        async function saveCart() {
+            try {
+                await db.set('cart', cart);
+            } catch (error) {
+                console.error('Failed to save cart:', error);
+            }
+        }
+
+        function updateCartUI() {
+            const cartCount = document.getElementById('cartCount');
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            cartCount.textContent = totalItems;
+            cartCount.style.display = totalItems > 0 ? 'grid' : 'none';
+        }
+
+        function openCart() {
+            renderCartItems();
+            document.getElementById('cartModal').classList.add('show');
+        }
+
+        function closeCart() {
+            document.getElementById('cartModal').classList.remove('show');
+        }
+
+        function renderCartItems() {
+            const cartItems = document.getElementById('cartItems');
+            const cartTotal = document.getElementById('cartTotal');
+            const totalAmount = document.getElementById('totalAmount');
+
+            if (cart.length === 0) {
+                cartItems.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 2rem;">Your cart is empty</div>';
+                cartTotal.style.display = 'none';
+                return;
+            }
+
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+            cartItems.innerHTML = cart.map(item => `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <div class="cart-item-name">${item.name}</div>
+                        <div class="cart-item-brand">${item.brand}</div>
+                        <div class="cart-item-price">$${item.price.toLocaleString()}</div>
+                    </div>
+                    <div class="cart-item-actions">
+                        <div class="quantity-controls">
+                            <button class="qty-btn" onclick="updateQuantity(${item.id}, -1)">-</button>
+                            <span class="quantity">${item.quantity}</span>
+                            <button class="qty-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
+                        </div>
+                        <button class="remove-btn" onclick="removeFromCart(${item.id})">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+
+            totalAmount.textContent = `$${total.toLocaleString()}`;
+            cartTotal.style.display = 'block';
+        }
+
+        async function checkout() {
+            if (cart.length === 0) return;
+
+            // Simulate checkout process
+            showToast('Order placed successfully!');
+            
+            // Clear cart
+            cart = [];
+            await saveCart();
+            updateCartUI();
+            closeCart();
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize app when page loads
+        init();
+    </script>
+</body>
+</html>
