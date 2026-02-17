@@ -46,15 +46,17 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
 </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Room - Singularity Engine</title>
+    <title>Singularity Chat</title>
     <style>
         :root {
-            --bg-dark: #0a0a0a;
+            --bg-primary: #0a0a0a;
             --bg-secondary: #1a1a1a;
-            --accent: #00d4ff;
-            --text-light: #e0e0e0;
+            --bg-accent: #2a2a2a;
+            --text-primary: #e0e0e0;
             --text-muted: #888;
-            --error: #ff4757;
+            --accent: #00d4ff;
+            --accent-hover: #00b8e6;
+            --danger: #ff4757;
             --success: #2ed573;
             --warning: #ffa502;
         }
@@ -66,30 +68,33 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
         }
 
         body {
-            background: var(--bg-dark);
-            color: var(--text-light);
             font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             height: 100vh;
             overflow: hidden;
         }
 
-        .loading {
+        .loader {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-dark);
+            inset: 0;
             display: grid;
             place-items: center;
+            background: var(--bg-primary);
             z-index: 1000;
-            transition: opacity 0.3s ease;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .spinner {
             width: 40px;
             height: 40px;
-            border: 3px solid var(--bg-secondary);
+            border: 3px solid var(--bg-accent);
             border-top: 3px solid var(--accent);
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -100,45 +105,39 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
             100% { transform: rotate(360deg); }
         }
 
-        .app {
-            display: flex;
-            flex-direction: column;
+        .chat-container {
             height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
             max-width: 1200px;
             margin: 0 auto;
             background: var(--bg-secondary);
-            opacity: 0;
-            animation: fadeIn 0.5s ease forwards;
-        }
-
-        @keyframes fadeIn {
-            to { opacity: 1; }
         }
 
         .header {
             padding: 1rem;
-            background: linear-gradient(135deg, var(--accent), #0099cc);
-            color: white;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
+            background: var(--bg-accent);
+            border-bottom: 2px solid var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
         .header h1 {
-            font-size: clamp(1.2rem, 4vw, 1.8rem);
-            font-weight: 600;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            background: linear-gradient(135deg, var(--accent), #fff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .online-count {
+        .user-count {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
             font-size: 0.9rem;
-            opacity: 0.9;
-            margin-top: 0.25rem;
-        }
-
-        .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
+            font-weight: 600;
         }
 
         .messages {
@@ -148,19 +147,57 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
-            scroll-behavior: smooth;
         }
 
         .message {
-            padding: 0.75rem 1rem;
-            background: var(--bg-dark);
+            background: var(--bg-accent);
             border-radius: 12px;
-            border-left: 3px solid var(--accent);
-            animation: slideIn 0.3s ease;
+            padding: 0.75rem 1rem;
+            max-width: 80%;
             word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+            position: relative;
+            border-left: 3px solid var(--accent);
         }
 
-        @keyframes slideIn {
+        .message.own {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            color: var(--bg-primary);
+            border-left: 3px solid var(--bg-primary);
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem;
+            font-size: 0.85rem;
+        }
+
+        .username {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .message.own .username {
+            color: var(--bg-primary);
+        }
+
+        .timestamp {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .message.own .timestamp {
+            color: rgba(10, 10, 10, 0.7);
+        }
+
+        .message-content {
+            line-height: 1.4;
+        }
+
+        @keyframes fadeIn {
             from {
                 opacity: 0;
                 transform: translateY(10px);
@@ -171,695 +208,476 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
             }
         }
 
-        .message.system {
-            background: var(--bg-secondary);
-            border-left-color: var(--warning);
-            font-style: italic;
-            text-align: center;
-            color: var(--text-muted);
-        }
-
-        .message-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.25rem;
-        }
-
-        .username {
-            font-weight: 600;
-            color: var(--accent);
-            font-size: 0.9rem;
-        }
-
-        .timestamp {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        .message-text {
-            line-height: 1.4;
-        }
-
-        .empty-state {
-            text-align: center;
-            color: var(--text-muted);
-            padding: 2rem;
-            font-style: italic;
-        }
-
         .input-area {
             padding: 1rem;
-            background: var(--bg-dark);
-            border-top: 1px solid #333;
+            background: var(--bg-accent);
+            border-top: 1px solid var(--accent);
         }
 
-        .username-setup {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .username-setup input {
-            flex: 1;
-            min-width: 200px;
-            padding: 0.75rem;
-            background: var(--bg-secondary);
-            border: 1px solid #333;
+        .username-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-primary);
+            border: 2px solid var(--accent);
             border-radius: 8px;
-            color: var(--text-light);
+            color: var(--text-primary);
             font-size: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
         }
 
-        .username-setup input:focus {
+        .username-input:focus {
             outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+            border-color: var(--accent-hover);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
         }
 
         .message-form {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.75rem;
             align-items: flex-end;
         }
 
         .message-input {
             flex: 1;
-            padding: 0.75rem;
-            background: var(--bg-secondary);
-            border: 1px solid #333;
+            padding: 0.75rem 1rem;
+            background: var(--bg-primary);
+            border: 2px solid var(--accent);
             border-radius: 8px;
-            color: var(--text-light);
+            color: var(--text-primary);
             font-size: 1rem;
-            resize: vertical;
+            resize: none;
             min-height: 44px;
             max-height: 120px;
+            transition: all 0.2s ease;
         }
 
         .message-input:focus {
             outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+            border-color: var(--accent-hover);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
         }
 
-        .send-btn, .set-username-btn {
+        .send-button {
             padding: 0.75rem 1.5rem;
-            background: linear-gradient(135deg, var(--accent), #0099cc);
-            color: white;
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            color: var(--bg-primary);
             border: none;
             border-radius: 8px;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
             transition: all 0.2s ease;
-            white-space: nowrap;
+            min-width: 80px;
         }
 
-        .send-btn:hover, .set-username-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
         }
 
-        .send-btn:active, .set-username-btn:active {
-            transform: translateY(0);
-        }
-
-        .send-btn:disabled {
+        .send-button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
 
-        .error-message {
-            background: var(--error);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            margin-top: 0.5rem;
-            font-size: 0.9rem;
-            animation: shake 0.5s ease;
-        }
-
-        @keyframes shake {
-            0%, 20%, 40%, 60%, 80% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-        }
-
-        .typing-indicator {
-            padding: 0.5rem 1rem;
-            color: var(--text-muted);
-            font-style: italic;
-            font-size: 0.9rem;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
-
-        .character-count {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-align: right;
-            margin-top: 0.25rem;
-        }
-
-        .character-count.warning {
+        .rate-limit {
             color: var(--warning);
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 0.5rem;
         }
 
-        .character-count.error {
-            color: var(--error);
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            margin: 2rem 0;
         }
 
-        @media (max-width: 768px) {
-            .username-setup, .message-form {
-                flex-direction: column;
-            }
-            
-            .username-setup input {
-                min-width: unset;
-            }
-            
-            .messages {
-                padding: 0.75rem;
-            }
-            
-            .message {
-                padding: 0.6rem 0.8rem;
-            }
+        .empty-state h3 {
+            margin-bottom: 0.5rem;
+            color: var(--accent);
         }
 
-        .status-indicator {
+        .toast {
             position: fixed;
-            top: 1rem;
-            right: 1rem;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            z-index: 100;
+            top: 20px;
+            right: 20px;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1001;
+            opacity: 0;
+            transform: translateX(100%);
             transition: all 0.3s ease;
         }
 
-        .status-indicator.online {
-            background: var(--success);
-            color: white;
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
         }
 
-        .status-indicator.error {
-            background: var(--error);
-            color: white;
+        .toast.error {
+            background: var(--danger);
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.warning {
+            background: var(--warning);
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                height: 100vh;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            .message-form {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .send-button {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
+    <div class="loader" id="loader">
+        <div>
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem;">Connecting to chat...</p>
+        </div>
     </div>
 
-    <div class="app" id="app">
+    <div class="chat-container">
         <div class="header">
-            <h1>🚀 Singularity Chat</h1>
-            <div class="online-count" id="onlineCount">Loading...</div>
+            <h1>Singularity Chat</h1>
+            <div class="user-count" id="userCount">0 online</div>
         </div>
 
-        <div class="chat-container">
-            <div class="messages" id="messages">
-                <div class="empty-state">
-                    Welcome to Singularity Chat! Set your username and start chatting.
-                </div>
-            </div>
-            
-            <div class="typing-indicator" id="typingIndicator" style="display: none;">
-                Someone is typing...
+        <div class="messages" id="messages">
+            <div class="empty-state">
+                <h3>Welcome to Singularity Chat!</h3>
+                <p>Be the first to start the conversation</p>
             </div>
         </div>
 
         <div class="input-area">
-            <div class="username-setup" id="usernameSetup">
-                <input type="text" id="usernameInput" placeholder="Enter your username..." maxlength="20">
-                <button class="set-username-btn" id="setUsernameBtn">Set Username</button>
-            </div>
-            
-            <div class="message-form" id="messageForm" style="display: none;">
-                <textarea id="messageInput" class="message-input" placeholder="Type your message... (Shift+Enter for new line)" maxlength="500" rows="1"></textarea>
-                <button class="send-btn" id="sendBtn">Send</button>
-            </div>
-            
-            <div class="character-count" id="charCount" style="display: none;">0/500</div>
-            <div class="error-message" id="errorMessage" style="display: none;"></div>
+            <input type="text" id="usernameInput" class="username-input" placeholder="Enter your username..." maxlength="20">
+            <form class="message-form" id="messageForm">
+                <textarea id="messageInput" class="message-input" placeholder="Type your message..." maxlength="500" rows="1"></textarea>
+                <button type="submit" class="send-button" id="sendButton" disabled>Send</button>
+            </form>
+            <div class="rate-limit" id="rateLimitMsg" style="display: none;"></div>
         </div>
     </div>
 
-    <div class="status-indicator online" id="statusIndicator">Connected</div>
+    <div class="toast" id="toast"></div>
 
     <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
 
     <script>
         class ChatApp {
             constructor() {
-                this.currentUser = null;
+                this.username = '';
                 this.lastMessageTime = 0;
                 this.messageCount = 0;
-                this.isTyping = false;
-                this.typingTimeout = null;
-                this.pollInterval = null;
-                this.lastPollTime = 0;
+                this.rateLimitWindow = 60000; // 1 minute
+                this.maxMessagesPerWindow = 10;
+                this.pollInterval = 2000; // 2 seconds
+                this.lastMessageId = 0;
                 
-                // Spam prevention
-                this.MESSAGE_COOLDOWN = 2000; // 2 seconds between messages
-                this.MAX_MESSAGES_PER_MINUTE = 10;
-                this.messageTimestamps = [];
-                
-                // Profanity filter (basic)
-                this.toxicWords = [
-                    'spam', 'stupid', 'hate', 'kill', 'die', 'idiot', 'dumb',
-                    'loser', 'noob', 'suck', 'terrible', 'awful', 'disgusting'
+                this.toxicPatterns = [
+                    /\b(hate|kill|die|stupid|idiot|moron|dumb|loser|ugly)\b/i,
+                    /\b(spam|scam|hack|virus)\b/i,
+                    /(.)\1{4,}/, // repeated characters
+                    /[A-Z]{5,}/, // excessive caps
                 ];
                 
                 this.init();
             }
-            
+
             async init() {
-                await this.loadUsername();
+                await this.loadMessages();
                 this.setupEventListeners();
                 this.startPolling();
-                
-                // Hide loading screen
-                setTimeout(() => {
-                    document.getElementById('loading').style.opacity = '0';
-                    setTimeout(() => {
-                        document.getElementById('loading').style.display = 'none';
-                    }, 300);
-                }, 500);
+                this.hideLoader();
             }
-            
-            async loadUsername() {
-                try {
-                    const savedUsername = await db.get('currentUser');
-                    if (savedUsername && savedUsername.trim()) {
-                        this.currentUser = savedUsername.trim();
-                        this.showChatInterface();
-                        await this.loadMessages();
-                        await this.updateOnlineStatus();
-                    }
-                } catch (error) {
-                    this.showError('Failed to load user data');
-                }
+
+            hideLoader() {
+                const loader = document.getElementById('loader');
+                loader.classList.add('hidden');
             }
-            
+
             setupEventListeners() {
                 const usernameInput = document.getElementById('usernameInput');
-                const setUsernameBtn = document.getElementById('setUsernameBtn');
                 const messageInput = document.getElementById('messageInput');
-                const sendBtn = document.getElementById('sendBtn');
-                
-                // Username setup
-                usernameInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        this.setUsername();
-                    }
+                const messageForm = document.getElementById('messageForm');
+
+                usernameInput.addEventListener('input', (e) => {
+                    this.username = e.target.value.trim();
+                    this.updateSendButton();
                 });
-                
-                setUsernameBtn.addEventListener('click', () => this.setUsername());
-                
-                // Message input
+
+                messageInput.addEventListener('input', (e) => {
+                    this.autoResize(e.target);
+                    this.updateSendButton();
+                });
+
                 messageInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         this.sendMessage();
                     }
                 });
-                
-                messageInput.addEventListener('input', () => {
-                    this.updateCharacterCount();
-                    this.handleTyping();
-                });
-                
-                sendBtn.addEventListener('click', () => this.sendMessage());
-                
-                // Auto-resize textarea
-                messageInput.addEventListener('input', () => {
-                    messageInput.style.height = 'auto';
-                    messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+
+                messageForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.sendMessage();
                 });
             }
-            
-            async setUsername() {
-                const usernameInput = document.getElementById('usernameInput');
-                const username = usernameInput.value.trim();
-                
-                if (!username) {
-                    this.showError('Please enter a username');
-                    return;
-                }
-                
-                if (username.length < 2 || username.length > 20) {
-                    this.showError('Username must be 2-20 characters');
-                    return;
-                }
-                
-                if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-                    this.showError('Username can only contain letters, numbers, _ and -');
-                    return;
-                }
-                
-                if (this.containsToxicContent(username)) {
-                    this.showError('Please choose a more appropriate username');
-                    return;
-                }
-                
-                try {
-                    // Check if username is already taken
-                    const users = await db.get('activeUsers') || {};
-                    const usernames = Object.values(users).map(u => u.username.toLowerCase());
-                    
-                    if (usernames.includes(username.toLowerCase())) {
-                        this.showError('Username already taken. Please choose another.');
-                        return;
-                    }
-                    
-                    this.currentUser = username;
-                    await db.set('currentUser', username);
-                    
-                    this.showChatInterface();
-                    await this.loadMessages();
-                    await this.updateOnlineStatus();
-                    await this.addSystemMessage(`${username} joined the chat`);
-                    
-                } catch (error) {
-                    this.showError('Failed to set username. Please try again.');
-                }
+
+            autoResize(textarea) {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
             }
-            
-            showChatInterface() {
-                document.getElementById('usernameSetup').style.display = 'none';
-                document.getElementById('messageForm').style.display = 'flex';
-                document.getElementById('charCount').style.display = 'block';
-                document.getElementById('messageInput').focus();
+
+            updateSendButton() {
+                const messageInput = document.getElementById('messageInput');
+                const sendButton = document.getElementById('sendButton');
+                
+                const canSend = this.username.length > 0 && 
+                               messageInput.value.trim().length > 0 && 
+                               !this.isRateLimited();
+                
+                sendButton.disabled = !canSend;
             }
-            
+
+            isRateLimited() {
+                const now = Date.now();
+                const windowStart = now - this.rateLimitWindow;
+                
+                // Reset counter if window has passed
+                if (this.lastMessageTime < windowStart) {
+                    this.messageCount = 0;
+                }
+                
+                return this.messageCount >= this.maxMessagesPerWindow;
+            }
+
+            showRateLimit() {
+                const rateLimitMsg = document.getElementById('rateLimitMsg');
+                rateLimitMsg.textContent = `Rate limited. Please wait before sending another message.`;
+                rateLimitMsg.style.display = 'block';
+                
+                setTimeout(() => {
+                    rateLimitMsg.style.display = 'none';
+                }, 5000);
+            }
+
+            isMessageToxic(message) {
+                return this.toxicPatterns.some(pattern => pattern.test(message));
+            }
+
+            sanitizeMessage(message) {
+                return message
+                    .replace(/[<>]/g, '') // Remove potential HTML
+                    .replace(/https?:\/\/[^\s]+/gi, '[LINK]') // Replace URLs
+                    .trim();
+            }
+
             async sendMessage() {
                 const messageInput = document.getElementById('messageInput');
                 const message = messageInput.value.trim();
                 
-                if (!message || !this.currentUser) return;
-                
-                // Spam prevention
-                const now = Date.now();
-                if (now - this.lastMessageTime < this.MESSAGE_COOLDOWN) {
-                    this.showError(`Please wait ${Math.ceil((this.MESSAGE_COOLDOWN - (now - this.lastMessageTime)) / 1000)} seconds`);
+                if (!message || !this.username || this.isRateLimited()) {
+                    if (this.isRateLimited()) {
+                        this.showRateLimit();
+                    }
                     return;
                 }
-                
-                // Rate limiting
-                this.messageTimestamps = this.messageTimestamps.filter(time => now - time < 60000);
-                if (this.messageTimestamps.length >= this.MAX_MESSAGES_PER_MINUTE) {
-                    this.showError('Too many messages. Please slow down.');
+
+                if (this.isMessageToxic(message)) {
+                    this.showToast('Message contains inappropriate content', 'error');
                     return;
                 }
-                
-                // Content moderation
-                if (this.containsToxicContent(message)) {
-                    this.showError('Message contains inappropriate content. Please be respectful.');
+
+                const sanitizedMessage = this.sanitizeMessage(message);
+                if (sanitizedMessage.length === 0) {
+                    this.showToast('Message cannot be empty', 'error');
                     return;
                 }
-                
-                if (message.length > 500) {
-                    this.showError('Message is too long (max 500 characters)');
-                    return;
-                }
-                
+
                 try {
-                    const messageData = {
-                        id: `msg_${now}_${Math.random().toString(36).substr(2, 9)}`,
-                        username: this.currentUser,
-                        text: message,
-                        timestamp: now
+                    const messages = await db.get('messages') || [];
+                    const newMessage = {
+                        id: Date.now() + Math.random(),
+                        username: this.username,
+                        message: sanitizedMessage,
+                        timestamp: new Date().toISOString(),
+                        userId: this.getUserId()
                     };
-                    
-                    // Get existing messages
-                    const messages = await db.get('chatMessages') || [];
-                    messages.push(messageData);
+
+                    messages.push(newMessage);
                     
                     // Keep only last 100 messages
                     if (messages.length > 100) {
                         messages.splice(0, messages.length - 100);
                     }
+
+                    await db.set('messages', messages);
+                    await this.updateUserActivity();
                     
-                    await db.set('chatMessages', messages);
+                    this.messageCount++;
+                    this.lastMessageTime = Date.now();
                     
                     messageInput.value = '';
-                    this.updateCharacterCount();
-                    this.lastMessageTime = now;
-                    this.messageTimestamps.push(now);
-                    
-                    // Clear typing indicator
-                    this.isTyping = false;
-                    await this.updateTypingStatus();
+                    this.autoResize(messageInput);
+                    this.updateSendButton();
                     
                     await this.loadMessages();
                     
                 } catch (error) {
-                    this.showError('Failed to send message. Please try again.');
+                    this.showToast('Failed to send message', 'error');
                 }
             }
-            
-            async loadMessages() {
-                try {
-                    const messages = await db.get('chatMessages') || [];
-                    const messagesContainer = document.getElementById('messages');
-                    
-                    if (messages.length === 0) {
-                        messagesContainer.innerHTML = '<div class="empty-state">No messages yet. Be the first to say hello! 👋</div>';
-                        return;
-                    }
-                    
-                    // Only show messages from last 24 hours
-                    const dayAgo = Date.now() - (24 * 60 * 60 * 1000);
-                    const recentMessages = messages.filter(msg => msg.timestamp > dayAgo);
-                    
-                    messagesContainer.innerHTML = recentMessages.map(msg => `
-                        <div class="message">
-                            <div class="message-header">
-                                <span class="username">${this.escapeHtml(msg.username)}</span>
-                                <span class="timestamp">${this.formatTime(msg.timestamp)}</span>
-                            </div>
-                            <div class="message-text">${this.escapeHtml(msg.text)}</div>
-                        </div>
-                    `).join('');
-                    
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    
-                } catch (error) {
-                    this.showError('Failed to load messages');
+
+            getUserId() {
+                let userId = localStorage.getItem('chatUserId');
+                if (!userId) {
+                    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('chatUserId', userId);
                 }
+                return userId;
             }
-            
-            async addSystemMessage(text) {
-                try {
-                    const messages = await db.get('chatMessages') || [];
-                    const systemMessage = {
-                        id: `sys_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                        username: 'System',
-                        text: text,
-                        timestamp: Date.now(),
-                        system: true
-                    };
-                    
-                    messages.push(systemMessage);
-                    
-                    if (messages.length > 100) {
-                        messages.splice(0, messages.length - 100);
-                    }
-                    
-                    await db.set('chatMessages', messages);
-                } catch (error) {
-                    console.error('Failed to add system message:', error);
-                }
-            }
-            
-            async updateOnlineStatus() {
-                if (!this.currentUser) return;
-                
+
+            async updateUserActivity() {
                 try {
                     const users = await db.get('activeUsers') || {};
-                    const userId = `user_${this.currentUser}`;
+                    const userId = this.getUserId();
                     
                     users[userId] = {
-                        username: this.currentUser,
-                        lastSeen: Date.now(),
-                        isTyping: this.isTyping
+                        username: this.username,
+                        lastActive: Date.now()
                     };
                     
                     // Remove users inactive for more than 5 minutes
-                    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-                    Object.keys(users).forEach(key => {
-                        if (users[key].lastSeen < fiveMinutesAgo) {
-                            delete users[key];
+                    const fiveMinutesAgo = Date.now() - 300000;
+                    Object.keys(users).forEach(id => {
+                        if (users[id].lastActive < fiveMinutesAgo) {
+                            delete users[id];
                         }
                     });
                     
                     await db.set('activeUsers', users);
-                    
-                    const onlineCount = Object.keys(users).length;
-                    document.getElementById('onlineCount').textContent = 
-                        `${onlineCount} user${onlineCount === 1 ? '' : 's'} online`;
-                    
+                    this.updateUserCount(Object.keys(users).length);
                 } catch (error) {
-                    console.error('Failed to update online status:', error);
+                    console.error('Failed to update user activity:', error);
                 }
             }
-            
-            async handleTyping() {
-                if (!this.currentUser) return;
-                
-                if (!this.isTyping) {
-                    this.isTyping = true;
-                    await this.updateTypingStatus();
-                }
-                
-                clearTimeout(this.typingTimeout);
-                this.typingTimeout = setTimeout(async () => {
-                    this.isTyping = false;
-                    await this.updateTypingStatus();
-                }, 2000);
+
+            updateUserCount(count) {
+                const userCount = document.getElementById('userCount');
+                userCount.textContent = `${count} online`;
             }
-            
-            async updateTypingStatus() {
+
+            async loadMessages() {
                 try {
+                    const messages = await db.get('messages') || [];
                     const users = await db.get('activeUsers') || {};
-                    const userId = `user_${this.currentUser}`;
                     
-                    if (users[userId]) {
-                        users[userId].isTyping = this.isTyping;
-                        users[userId].lastSeen = Date.now();
-                        await db.set('activeUsers', users);
+                    this.updateUserCount(Object.keys(users).length);
+                    this.renderMessages(messages);
+                    
+                    if (messages.length > 0) {
+                        this.lastMessageId = Math.max(...messages.map(m => m.id));
                     }
                 } catch (error) {
-                    console.error('Failed to update typing status:', error);
+                    this.showToast('Failed to load messages', 'error');
                 }
             }
-            
-            async checkTypingIndicators() {
-                try {
-                    const users = await db.get('activeUsers') || {};
-                    const typingUsers = Object.values(users)
-                        .filter(user => user.isTyping && user.username !== this.currentUser)
-                        .map(user => user.username);
-                    
-                    const typingIndicator = document.getElementById('typingIndicator');
-                    
-                    if (typingUsers.length > 0) {
-                        const text = typingUsers.length === 1 
-                            ? `${typingUsers[0]} is typing...`
-                            : `${typingUsers.length} people are typing...`;
-                        typingIndicator.textContent = text;
-                        typingIndicator.style.display = 'block';
-                    } else {
-                        typingIndicator.style.display = 'none';
-                    }
-                } catch (error) {
-                    console.error('Failed to check typing indicators:', error);
+
+            renderMessages(messages) {
+                const messagesContainer = document.getElementById('messages');
+                const userId = this.getUserId();
+                
+                if (messages.length === 0) {
+                    messagesContainer.innerHTML = `
+                        <div class="empty-state">
+                            <h3>Welcome to Singularity Chat!</h3>
+                            <p>Be the first to start the conversation</p>
+                        </div>
+                    `;
+                    return;
                 }
-            }
-            
-            startPolling() {
-                // Poll every 2 seconds
-                this.pollInterval = setInterval(async () => {
-                    await this.updateOnlineStatus();
-                    await this.checkTypingIndicators();
+
+                messagesContainer.innerHTML = messages.map(msg => {
+                    const isOwn = msg.userId === userId;
+                    const timestamp = new Date(msg.timestamp).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
                     
-                    // Check for new messages every 3 seconds
-                    const now = Date.now();
-                    if (now - this.lastPollTime > 3000) {
-                        await this.loadMessages();
-                        this.lastPollTime = now;
-                    }
-                }, 2000);
+                    return `
+                        <div class="message ${isOwn ? 'own' : ''}">
+                            <div class="message-header">
+                                <span class="username">${this.escapeHtml(msg.username)}</span>
+                                <span class="timestamp">${timestamp}</span>
+                            </div>
+                            <div class="message-content">${this.escapeHtml(msg.message)}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
-            
-            updateCharacterCount() {
-                const messageInput = document.getElementById('messageInput');
-                const charCount = document.getElementById('charCount');
-                const length = messageInput.value.length;
-                
-                charCount.textContent = `${length}/500`;
-                charCount.className = 'character-count';
-                
-                if (length > 450) {
-                    charCount.classList.add('error');
-                } else if (length > 350) {
-                    charCount.classList.add('warning');
-                }
-                
-                const sendBtn = document.getElementById('sendBtn');
-                sendBtn.disabled = length === 0 || length > 500;
-            }
-            
-            containsToxicContent(text) {
-                const lowerText = text.toLowerCase();
-                return this.toxicWords.some(word => lowerText.includes(word.toLowerCase()));
-            }
-            
+
             escapeHtml(text) {
                 const div = document.createElement('div');
                 div.textContent = text;
                 return div.innerHTML;
             }
-            
-            formatTime(timestamp) {
-                const date = new Date(timestamp);
-                const now = new Date();
-                const diffMs = now - date;
-                const diffMins = Math.floor(diffMs / 60000);
-                const diffHours = Math.floor(diffMins / 60);
-                
-                if (diffMins < 1) return 'just now';
-                if (diffMins < 60) return `${diffMins}m ago`;
-                if (diffHours < 24) return `${diffHours}h ago`;
-                
-                return date.toLocaleDateString() === now.toLocaleDateString() 
-                    ? date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                    : date.toLocaleDateString();
+
+            async startPolling() {
+                setInterval(async () => {
+                    if (this.username) {
+                        await this.updateUserActivity();
+                    }
+                    
+                    const messages = await db.get('messages') || [];
+                    if (messages.length > 0) {
+                        const latestMessageId = Math.max(...messages.map(m => m.id));
+                        if (latestMessageId > this.lastMessageId) {
+                            await this.loadMessages();
+                        }
+                    }
+                }, this.pollInterval);
             }
-            
-            showError(message) {
-                const errorDiv = document.getElementById('errorMessage');
-                errorDiv.textContent = message;
-                errorDiv.style.display = 'block';
+
+            showToast(message, type = 'info') {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.className = `toast ${type}`;
+                toast.classList.add('show');
                 
                 setTimeout(() => {
-                    errorDiv.style.display = 'none';
-                }, 5000);
+                    toast.classList.remove('show');
+                }, 3000);
             }
         }
-        
-        // Initialize app when DOM is loaded
+
+        // Initialize the chat app when page loads
         document.addEventListener('DOMContentLoaded', () => {
             new ChatApp();
-        });
-        
-        // Handle page visibility for better resource management
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                // Reduce polling when tab is not visible
-                if (window.chatApp && window.chatApp.pollInterval) {
-                    clearInterval(window.chatApp.pollInterval);
-                    window.chatApp.pollInterval = setInterval(async () => {
-                        await window.chatApp.updateOnlineStatus();
-                    }, 10000); // Poll every 10 seconds when hidden
-                }
-            } else {
-                // Resume normal polling when tab becomes visible
-                if (window.chatApp && window.chatApp.pollInterval) {
-                    clearInterval(window.chatApp.pollInterval);
-                    window.chatApp.startPolling();
-                }
-            }
         });
     </script>
 </body>
