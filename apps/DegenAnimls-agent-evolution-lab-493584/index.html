@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "DegenAnimls-agent-evolution-lab-493584";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Evolution Lab</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --accent: #00d4ff;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --danger: #ff4444;
+            --border: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .loading {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            display: grid;
+            place-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary), #2a2a2a);
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            animation: fadeIn 0.6s ease;
+        }
+
+        .header h1 {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent), #0088cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            animation: fadeIn 0.8s ease;
+        }
+
+        .lab-area {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .agent-card {
+            background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .agent-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.15);
+        }
+
+        .agent-card.selected {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, #1a2a3a, #2a3a4a);
+        }
+
+        .agent-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .agent-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat-value {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .controls {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .control-section {
+            margin-bottom: 2rem;
+        }
+
+        .control-section h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #0088cc);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #cc2222);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .evolution-progress {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .generation-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .controls {
+                position: static;
+            }
+
+            .agent-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <header class="header">
+        <h1>🧬 Agent Evolution Lab</h1>
+        <p>Evolve AI agents through genetic algorithms and neural network mutations</p>
+    </header>
+
+    <div class="main-container">
+        <div class="lab-area">
+            <div id="agent-container">
+                <div class="empty-state" id="empty-state">
+                    <h3>No Agents Yet</h3>
+                    <p>Create your first agent to begin evolution experiments</p>
+                </div>
+                <div class="agent-grid" id="agent-grid" style="display: none;"></div>
+            </div>
+
+            <div class="evolution-progress" id="evolution-progress" style="display: none;">
+                <div class="generation-info">
+                    <span>Generation: <strong id="current-generation">1</strong></span>
+                    <span>Best Fitness: <strong id="best-fitness">0</strong></span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div style="text-align: center; margin-top: 1rem;">
+                    <button class="btn btn-primary" id="evolve-btn" onclick="evolveGeneration()">
+                        🧬 Evolve Generation
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-section">
+                <h3>🤖 Create Agent</h3>
+                <div class="form-group">
+                    <label for="agent-name">Agent Name</label>
+                    <input type="text" id="agent-name" placeholder="Enter agent name...">
+                </div>
+                <div class="form-group">
+                    <label for="agent-type">Agent Type</label>
+                    <select id="agent-type">
+                        <option value="explorer">Explorer</option>
+                        <option value="hunter">Hunter</option>
+                        <option value="gatherer">Gatherer</option>
+                        <option value="survivor">Survivor</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="createAgent()">Create Agent</button>
+            </div>
+
+            <div class="control-section">
+                <h3>⚙️ Evolution Settings</h3>
+                <div class="form-group">
+                    <label for="mutation-rate">Mutation Rate (%)</label>
+                    <input type="range" id="mutation-rate" min="1" max="50" value="15">
+                    <span id="mutation-display">15%</span>
+                </div>
+                <div class="form-group">
+                    <label for="population-size">Population Size</label>
+                    <input type="range" id="population-size" min="10" max="100" value="30">
+                    <span id="population-display">30</span>
+                </div>
+                <div class="form-group">
+                    <label for="selection-pressure">Selection Pressure</label>
+                    <select id="selection-pressure">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>📊 Lab Management</h3>
+                <button class="btn btn-secondary" onclick="exportData()" style="width: 100%; margin-bottom: 0.5rem;">
+                    📥 Export Data
+                </button>
+                <button class="btn btn-danger" onclick="resetLab()" style="width: 100%;">
+                    🗑️ Reset Lab
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let agents = [];
+        let selectedAgent = null;
+        let currentGeneration = 1;
+
+        // Initialize sliders
+        document.getElementById('mutation-rate').addEventListener('input', (e) => {
+            document.getElementById('mutation-display').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('population-size').addEventListener('input', (e) => {
+            document.getElementById('population-display').textContent = e.target.value;
+        });
+
+        // Agent class
+        class Agent {
+            constructor(name, type) {
+                this.id = Math.random().toString(36).substr(2, 9);
+                this.name = name;
+                this.type = type;
+                this.generation = currentGeneration;
+                this.stats = this.generateRandomStats();
+                this.fitness = this.calculateFitness();
+                this.age = 0;
+                this.parentIds = [];
+            }
+
+            generateRandomStats() {
+                return {
+                    intelligence: Math.random() * 100,
+                    strength: Math.random() * 100,
+                    speed: Math.random() * 100,
+                    adaptability: Math.random() * 100,
+                    memory: Math.random() * 100,
+                    creativity: Math.random() * 100
+                };
+            }
+
+            calculateFitness() {
+                const typeMultipliers = {
+                    explorer: { intelligence: 1.5, speed: 1.3, adaptability: 1.4 },
+                    hunter: { strength: 1.5, speed: 1.4, intelligence: 1.2 },
+                    gatherer: { memory: 1.5, intelligence: 1.3, adaptability: 1.2 },
+                    survivor: { adaptability: 1.6, strength: 1.2, memory: 1.3 }
+                };
+
+                let fitness = 0;
+                const multipliers = typeMultipliers[this.type] || {};
+
+                Object.keys(this.stats).forEach(stat => {
+                    const multiplier = multipliers[stat] || 1;
+                    fitness += this.stats[stat] * multiplier;
+                });
+
+                return Math.round(fitness + this.age * 5);
+            }
+
+            mutate(mutationRate) {
+                const mutationChance = mutationRate / 100;
+                Object.keys(this.stats).forEach(stat => {
+                    if (Math.random() < mutationChance) {
+                        const mutation = (Math.random() - 0.5) * 20;
+                        this.stats[stat] = Math.max(0, Math.min(100, this.stats[stat] + mutation));
+                    }
+                });
+                this.fitness = this.calculateFitness();
+            }
+
+            static crossover(parent1, parent2) {
+                const child = new Agent(
+                    `${parent1.name.split(' ')[0]}-${parent2.name.split(' ')[0]}-${Math.floor(Math.random() * 100)}`,
+                    Math.random() > 0.5 ? parent1.type : parent2.type
+                );
+                
+                child.parentIds = [parent1.id, parent2.id];
+                
+                Object.keys(child.stats).forEach(stat => {
+                    child.stats[stat] = (parent1.stats[stat] + parent2.stats[stat]) / 2;
+                    child.stats[stat] += (Math.random() - 0.5) * 10; // Small random variation
+                    child.stats[stat] = Math.max(0, Math.min(100, child.stats[stat]));
+                });
+                
+                child.fitness = child.calculateFitness();
+                return child;
+            }
+        }
+
+        async function init() {
+            try {
+                const savedAgents = await db.get('agents') || [];
+                const savedGeneration = await db.get('generation') || 1;
+                
+                agents = savedAgents.map(data => {
+                    const agent = new Agent(data.name, data.type);
+                    Object.assign(agent, data);
+                    return agent;
+                });
+                
+                currentGeneration = savedGeneration;
+                
+                updateUI();
+                showToast('Lab loaded successfully!', 'success');
+            } catch (error) {
+                console.error('Failed to load lab data:', error);
+                showToast('Failed to load lab data', 'error');
+            }
+            
+            document.getElementById('loading').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 500);
+        }
+
+        async function saveData() {
+            try {
+                await db.set('agents', agents);
+                await db.set('generation', currentGeneration);
+            } catch (error) {
+                console.error('Failed to save data:', error);
+                showToast('Failed to save data', 'error');
+            }
+        }
+
+        function createAgent() {
+            const name = document.getElementById('agent-name').value.trim();
+            const type = document.getElementById('agent-type').value;
+            
+            if (!name) {
+                showToast('Please enter an agent name', 'error');
+                return;
+            }
+            
+            const agent = new Agent(name, type);
+            agents.push(agent);
+            
+            document.getElementById('agent-name').value = '';
+            
+            updateUI();
+            saveData();
+            showToast(`Agent "${name}" created!`, 'success');
+        }
+
+        function selectAgent(agentId) {
+            selectedAgent = selectedAgent === agentId ? null : agentId;
+            updateAgentGrid();
+        }
+
+        function updateUI() {
+            updateAgentGrid();
+            updateEvolutionProgress();
+        }
+
+        function updateAgentGrid() {
+            const container = document.getElementById('agent-container');
+            const emptyState = document.getElementById('empty-state');
+            const agentGrid = document.getElementById('agent-grid');
+            
+            if (agents.length === 0) {
+                emptyState.style.display = 'block';
+                agentGrid.style.display = 'none';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            agentGrid.style.display = 'grid';
+            
+            // Sort agents by fitness (highest first)
+            agents.sort((a, b) => b.fitness - a.fitness);
+            
+            agentGrid.innerHTML = agents.map(agent => `
+                <div class="agent-card ${selectedAgent === agent.id ? 'selected' : ''}" 
+                     onclick="selectAgent('${agent.id}')">
+                    <div class="agent-name">${agent.name} (Gen ${agent.generation})</div>
+                    <div class="agent-stats">
+                        <div class="stat">
+                            <span>Type:</span>
+                            <span class="stat-value">${agent.type}</span>
+                        </div>
+                        <div class="stat">
+                            <span>Fitness:</span>
+                            <span class="stat-value">${agent.fitness}</span>
+                        </div>
+                        <div class="stat">
+                            <span>Intel:</span>
+                            <span class="stat-value">${Math.round(agent.stats.intelligence)}</span>
+                        </div>
+                        <div class="stat">
+                            <span>Strength:</span>
+                            <span class="stat-value">${Math.round(agent.stats.strength)}</span>
+                        </div>
+                        <div class="stat">
+                            <span>Speed:</span>
+                            <span class="stat-value">${Math.round(agent.stats.speed)}</span>
+                        </div>
+                        <div class="stat">
+                            <span>Adapt:</span>
+                            <span class="stat-value">${Math.round(agent.stats.adaptability)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateEvolutionProgress() {
+            const progressContainer = document.getElementById('evolution-progress');
+            
+            if (agents.length === 0) {
+                progressContainer.style.display = 'none';
+                return;
+            }
+            
+            progressContainer.style.display = 'block';
+            
+            document.getElementById('current-generation').textContent = currentGeneration;
+            
+            const bestFitness = agents.length > 0 ? Math.max(...agents.map(a => a.fitness)) : 0;
+            document.getElementById('best-fitness').textContent = bestFitness;
+            
+            // Progress based on fitness improvement
+            const progressPercentage = Math.min(100, (bestFitness / 1000) * 100);
+            document.getElementById('progress-fill').style.width = progressPercentage + '%';
+        }
+
+        async function evolveGeneration() {
+            if (agents.length < 4) {
+                showToast('Need at least 4 agents to evolve', 'error');
+                return;
+            }
+            
+            const evolveBtn = document.getElementById('evolve-btn');
+            evolveBtn.disabled = true;
+            evolveBtn.textContent = '🧬 Evolving...';
+            
+            const mutationRate = parseInt(document.getElementById('mutation-rate').value);
+            const targetPopulation = parseInt(document.getElementById('population-size').value);
+            const selectionPressure = document.getElementById('selection-pressure').value;
+            
+            // Age existing agents
+            agents.forEach(agent => agent.age++);
+            
+            // Selection based on fitness
+            agents.sort((a, b) => b.fitness - a.fitness);
+            
+            const selectionSizes = {
+                low: Math.floor(agents.length * 0.8),
+                medium: Math.floor(agents.length * 0.6),
+                high: Math.floor(agents.length * 0.4)
+            };
+            
+            const survivors = agents.slice(0, Math.max(2, selectionSizes[selectionPressure]));
+            
+            // Create new generation
+            const newAgents = [...survivors];
+            currentGeneration++;
+            
+            while (newAgents.length < targetPopulation && survivors.length >= 2) {
+                const parent1 = selectParent(survivors);
+                const parent2 = selectParent(survivors.filter(a => a.id !== parent1.id));
+                
+                if (parent2) {
+                    const child = Agent.crossover(parent1, parent2);
+                    child.generation = currentGeneration;
+                    child.mutate(mutationRate);
+                    newAgents.push(child);
+                }
+            }
+            
+            // Apply mutations to survivors
+            survivors.forEach(agent => {
+                if (Math.random() < 0.3) { // 30% chance for survivors to mutate
+                    agent.mutate(mutationRate / 2);
+                }
+            });
+            
+            agents = newAgents;
+            
+            // Recalculate fitness for all agents
+            agents.forEach(agent => {
+                agent.fitness = agent.calculateFitness();
+            });
+            
+            updateUI();
+            await saveData();
+            
+            evolveBtn.disabled = false;
+            evolveBtn.textContent = '🧬 Evolve Generation';
+            
+            showToast(`Generation ${currentGeneration} evolved!`, 'success');
+        }
+
+        function selectParent(pool) {
+            // Tournament selection
+            const tournamentSize = Math.min(3, pool.length);
+            const tournament = [];
+            
+            for (let i = 0; i < tournamentSize; i++) {
+                tournament.push(pool[Math.floor(Math.random() * pool.length)]);
+            }
+            
+            return tournament.sort((a, b) => b.fitness - a.fitness)[0];
+        }
+
+        async function exportData() {
+            try {
+                const data = {
+                    agents: agents,
+                    generation: currentGeneration,
+                    exportDate: new Date().toISOString()
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `agent-evolution-lab-gen${currentGeneration}.json`;
+                a.click();
+                
+                showToast('Data exported successfully!', 'success');
+            } catch (error) {
+                showToast('Failed to export data', 'error');
+            }
+        }
+
+        async function resetLab() {
+            if (!confirm('Are you sure you want to reset the entire lab? This cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                agents = [];
+                selectedAgent = null;
+                currentGeneration = 1;
+                
+                await db.delete('agents');
+                await db.delete('generation');
+                
+                updateUI();
+                showToast('Lab reset successfully!', 'success');
+            } catch (error) {
+                showToast('Failed to reset lab', 'error');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                document.getElementById('agent-name').focus();
+            }
+            if (e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                if (agents.length >= 4) evolveGeneration();
+            }
+        });
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
