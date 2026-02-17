@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "GregCaminiti-an-app-that-suggests-idea-374376";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Tweet Ideas</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: #1a1a1a;
+            --cyan: #00d4ff;
+            --cyan-dim: #0099cc;
+            --text: #e0e0e0;
+            --text-muted: #999;
+            --border: #333;
+            --gradient: linear-gradient(135deg, var(--cyan), #0066cc);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .title {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: clamp(0.9rem, 2vw, 1rem);
+        }
+
+        .idea-card {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .idea-card:hover {
+            border-color: var(--cyan);
+            box-shadow: 0 4px 16px rgba(0, 212, 255, 0.1);
+        }
+
+        .idea-text {
+            font-size: clamp(1rem, 3vw, 1.1rem);
+            line-height: 1.6;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .char-count {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .char-count.over-limit {
+            color: #ff4444;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-dark);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .favorites {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .favorites-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--cyan);
+        }
+
+        .favorite-item {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .favorite-text {
+            flex: 1;
+            margin-right: 1rem;
+        }
+
+        .favorite-remove {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: color 0.3s ease;
+        }
+
+        .favorite-remove:hover {
+            color: #ff4444;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem 0;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 1rem;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem 0;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shimmer {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1.5rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">LLM Tweet Ideas</h1>
+            <p class="subtitle">Get creative project ideas that fit in a tweet</p>
+        </div>
+
+        <div class="idea-card" id="ideaCard">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Generating your first idea...</p>
+            </div>
+            <div class="idea-text" id="ideaText" style="display: none;"></div>
+            <div class="char-count" id="charCount" style="display: none;"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="generateBtn" disabled>New Idea</button>
+            <button class="btn btn-secondary" id="favoriteBtn" disabled>⭐ Favorite</button>
+        </div>
+
+        <div class="favorites">
+            <h3 class="favorites-title">Your Favorites</h3>
+            <div id="favoritesList">
+                <div class="empty-state">No favorites yet. Save some ideas you like!</div>
+            </div>
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        const ideas = [
+            "Build an AI that explains your code in the style of a pirate captain 🏴‍☠️",
+            "Create a bot that generates workout plans based on your mood and available time ⚡",
+            "Make an AI recipe generator that uses only ingredients you already have at home 🍳",
+            "Build a tool that converts technical jargon into plain English for any industry 📚",
+            "Create an AI that writes haikus about your GitHub commits 🌸",
+            "Make a bot that generates creative team names for any project or event 🚀",
+            "Build an AI that suggests Netflix shows based on your current weather ☁️",
+            "Create a tool that writes funny product reviews for everyday objects 😂",
+            "Make an AI that generates startup ideas by combining two random industries 💡",
+            "Build a bot that creates custom meditation scripts based on your stress level 🧘",
+            "Create an AI that writes song lyrics about your daily routine 🎵",
+            "Make a tool that generates creative excuses for being late (for fun!) ⏰",
+            "Build an AI that creates personalized motivational speeches for Monday mornings 💪",
+            "Create a bot that generates creative date ideas based on budget and location 💕",
+            "Make an AI that writes alternative endings to movies you didn't like 🎬",
+            "Build a tool that creates custom bedtime stories for adults having insomnia 🌙",
+            "Create an AI that generates creative ways to use leftover holiday decorations 🎄",
+            "Make a bot that writes professional emails in the style of your favorite character 📧",
+            "Build an AI that creates custom workout playlists based on your fitness goals 🎧",
+            "Create a tool that generates creative icebreaker questions for awkward situations 🧊",
+            "Make an AI that writes restaurant reviews for places that don't exist 🍽️",
+            "Build a bot that creates custom compliments for your friends and family ❤️",
+            "Create an AI that generates creative ways to procrastinate productively 📝",
+            "Make a tool that writes funny fortune cookie messages for modern life 🥠",
+            "Build an AI that creates custom morning routines based on your goals 🌅"
+        ];
+
+        let currentIdea = '';
+        let favorites = [];
+        let isLoading = false;
+
+        const ideaCard = document.getElementById('ideaCard');
+        const loading = document.getElementById('loading');
+        const ideaText = document.getElementById('ideaText');
+        const charCount = document.getElementById('charCount');
+        const generateBtn = document.getElementById('generateBtn');
+        const favoriteBtn = document.getElementById('favoriteBtn');
+        const favoritesList = document.getElementById('favoritesList');
+
+        async function loadFavorites() {
+            try {
+                const saved = await db.get('favorites');
+                favorites = saved || [];
+                renderFavorites();
+            } catch (error) {
+                console.error('Failed to load favorites:', error);
+            }
+        }
+
+        async function saveFavorites() {
+            try {
+                await db.set('favorites', favorites);
+            } catch (error) {
+                console.error('Failed to save favorites:', error);
+            }
+        }
+
+        function getRandomIdea() {
+            let idea;
+            do {
+                idea = ideas[Math.floor(Math.random() * ideas.length)];
+            } while (idea === currentIdea && ideas.length > 1);
+            return idea;
+        }
+
+        function displayIdea(idea) {
+            currentIdea = idea;
+            ideaText.textContent = idea;
+            
+            const count = idea.length;
+            charCount.textContent = `${count}/280`;
+            charCount.className = count > 280 ? 'char-count over-limit' : 'char-count';
+            
+            loading.style.display = 'none';
+            ideaText.style.display = 'block';
+            charCount.style.display = 'block';
+            
+            generateBtn.disabled = false;
+            favoriteBtn.disabled = false;
+        }
+
+        function generateIdea() {
+            if (isLoading) return;
+            
+            isLoading = true;
+            generateBtn.disabled = true;
+            favoriteBtn.disabled = true;
+            
+            ideaText.style.display = 'none';
+            charCount.style.display = 'none';
+            loading.style.display = 'block';
+            
+            setTimeout(() => {
+                const idea = getRandomIdea();
+                displayIdea(idea);
+                isLoading = false;
+            }, 800);
+        }
+
+        async function addToFavorites() {
+            if (!currentIdea || favorites.includes(currentIdea)) return;
+            
+            favorites.unshift(currentIdea);
+            if (favorites.length > 10) {
+                favorites = favorites.slice(0, 10);
+            }
+            
+            await saveFavorites();
+            renderFavorites();
+            
+            // Visual feedback
+            favoriteBtn.textContent = '⭐ Added!';
+            setTimeout(() => {
+                favoriteBtn.textContent = '⭐ Favorite';
+            }, 1500);
+        }
+
+        async function removeFavorite(idea) {
+            favorites = favorites.filter(fav => fav !== idea);
+            await saveFavorites();
+            renderFavorites();
+        }
+
+        function renderFavorites() {
+            if (favorites.length === 0) {
+                favoritesList.innerHTML = '<div class="empty-state">No favorites yet. Save some ideas you like!</div>';
+                return;
+            }
+            
+            favoritesList.innerHTML = favorites.map(idea => `
+                <div class="favorite-item">
+                    <div class="favorite-text">${idea}</div>
+                    <button class="favorite-remove" onclick="removeFavorite('${idea.replace(/'/g, "\\'")}')" title="Remove">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // Event listeners
+        generateBtn.addEventListener('click', generateIdea);
+        favoriteBtn.addEventListener('click', addToFavorites);
+
+        // Make removeFavorite globally accessible
+        window.removeFavorite = removeFavorite;
+
+        // Initialize
+        async function init() {
+            await loadFavorites();
+            setTimeout(() => {
+                const firstIdea = getRandomIdea();
+                displayIdea(firstIdea);
+            }, 1000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
