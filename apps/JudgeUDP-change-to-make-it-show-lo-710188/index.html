@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "JudgeUDP-change-to-make-it-show-lo-710188";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hidden Gems - Low Cap Crypto Finder</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: #1a1a1a;
+            --accent: #00d4ff;
+            --text: #e0e0e0;
+            --text-muted: #888;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --danger: #ff4444;
+            --border: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--bg-card), #2a2a2a);
+            padding: 2rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: clamp(1rem, 2vw, 1.2rem);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .controls {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .control-group {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .control-group h3 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .filter-row:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            min-width: 120px;
+        }
+
+        input, select {
+            flex: 1;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.7rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent), #0099cc);
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .coins-grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            margin-bottom: 2rem;
+        }
+
+        .coin-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .coin-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.15);
+        }
+
+        .coin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .coin-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .coin-symbol {
+            background: var(--accent);
+            color: var(--bg-dark);
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .coin-metrics {
+            display: grid;
+            gap: 0.8rem;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .price-positive {
+            color: var(--success);
+        }
+
+        .price-negative {
+            color: var(--danger);
+        }
+
+        .potential-score {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: linear-gradient(135deg, var(--success), #00cc66);
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stats-bar {
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            border: 1px solid var(--border);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            display: block;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .watchlist-btn {
+            background: transparent;
+            border: 1px solid var(--warning);
+            color: var(--warning);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 1rem;
+            width: 100%;
+        }
+
+        .watchlist-btn:hover {
+            background: var(--warning);
+            color: var(--bg-dark);
+        }
+
+        .watchlist-btn.added {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .coin-card {
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            label {
+                min-width: auto;
+                margin-bottom: 0.5rem;
+            }
+            
+            .coins-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div>
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; color: var(--text-muted);">Finding hidden gems...</p>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>💎 Hidden Gems</h1>
+        <p>Discover low market cap cryptocurrencies with high potential</p>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <h3>🎯 Market Cap Filters</h3>
+                <div class="filter-row">
+                    <label>Max Market Cap:</label>
+                    <select id="maxMarketCap">
+                        <option value="1000000">$1M</option>
+                        <option value="10000000" selected>$10M</option>
+                        <option value="50000000">$50M</option>
+                        <option value="100000000">$100M</option>
+                    </select>
+                </div>
+                <div class="filter-row">
+                    <label>Min Volume (24h):</label>
+                    <select id="minVolume">
+                        <option value="10000">$10K</option>
+                        <option value="50000" selected>$50K</option>
+                        <option value="100000">$100K</option>
+                        <option value="500000">$500K</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>📈 Performance Filters</h3>
+                <div class="filter-row">
+                    <label>Min Price Change (24h):</label>
+                    <select id="minPriceChange">
+                        <option value="-100">Any</option>
+                        <option value="0">Positive only</option>
+                        <option value="5" selected>+5% or more</option>
+                        <option value="10">+10% or more</option>
+                    </select>
+                </div>
+                <div class="filter-row">
+                    <label>Sort by:</label>
+                    <select id="sortBy">
+                        <option value="potential">Potential Score</option>
+                        <option value="price_change">Price Change</option>
+                        <option value="volume">Volume</option>
+                        <option value="market_cap">Market Cap</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <button class="btn" id="searchBtn">🔍 Find Hidden Gems</button>
+        </div>
+
+        <div class="stats-bar" id="statsBar" style="display: none;">
+            <div class="stat-item">
+                <span class="stat-value" id="totalCoins">0</span>
+                <span class="stat-label">Coins Found</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="avgPotential">0</span>
+                <span class="stat-label">Avg Potential</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="watchlistCount">0</span>
+                <span class="stat-label">In Watchlist</span>
+            </div>
+        </div>
+
+        <div class="coins-grid" id="coinsGrid"></div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let watchlist = [];
+        let currentCoins = [];
+
+        async function init() {
+            watchlist = await db.get("watchlist") || [];
+            updateWatchlistCount();
+            hideLoading();
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingScreen').classList.add('hidden');
+        }
+
+        function generateMockCoins(filters) {
+            const coinNames = [
+                "MoonRocket", "GemFinder", "Diamond", "Stellar", "Cosmos", "Nebula",
+                "Phoenix", "Quantum", "Infinity", "Nexus", "Pulse", "Aurora",
+                "Vortex", "Prism", "Catalyst", "Vertex", "Zenith", "Apex",
+                "Synergy", "Fusion", "Velocity", "Momentum", "Gravity", "Orbit"
+            ];
+
+            const symbols = coinNames.map(name => 
+                name.substring(0, 3).toUpperCase() + (Math.random() > 0.5 ? 'X' : '')
+            );
+
+            const coins = [];
+            const numCoins = Math.floor(Math.random() * 15) + 10;
+
+            for (let i = 0; i < numCoins; i++) {
+                const marketCap = Math.random() * filters.maxMarketCap;
+                const volume = filters.minVolume + Math.random() * (marketCap * 0.1);
+                const priceChange = (Math.random() - 0.3) * 30;
+                
+                if (priceChange < filters.minPriceChange) continue;
+                
+                const price = Math.random() * 10;
+                const potential = calculatePotentialScore(marketCap, volume, priceChange);
+
+                coins.push({
+                    id: `coin_${i}`,
+                    name: coinNames[Math.floor(Math.random() * coinNames.length)],
+                    symbol: symbols[Math.floor(Math.random() * symbols.length)],
+                    price: price,
+                    market_cap: marketCap,
+                    volume_24h: volume,
+                    price_change_24h: priceChange,
+                    potential_score: potential
+                });
+            }
+
+            return coins.sort((a, b) => {
+                switch (filters.sortBy) {
+                    case 'potential':
+                        return b.potential_score - a.potential_score;
+                    case 'price_change':
+                        return b.price_change_24h - a.price_change_24h;
+                    case 'volume':
+                        return b.volume_24h - a.volume_24h;
+                    case 'market_cap':
+                        return a.market_cap - b.market_cap;
+                    default:
+                        return b.potential_score - a.potential_score;
+                }
+            });
+        }
+
+        function calculatePotentialScore(marketCap, volume, priceChange) {
+            let score = 50;
+            
+            // Lower market cap = higher potential
+            if (marketCap < 1000000) score += 30;
+            else if (marketCap < 10000000) score += 20;
+            else if (marketCap < 50000000) score += 10;
+            
+            // Higher volume = more legitimate
+            if (volume > 500000) score += 15;
+            else if (volume > 100000) score += 10;
+            else if (volume > 50000) score += 5;
+            
+            // Positive price action
+            if (priceChange > 10) score += 20;
+            else if (priceChange > 5) score += 15;
+            else if (priceChange > 0) score += 10;
+            
+            return Math.min(Math.max(score + (Math.random() - 0.5) * 20, 0), 100);
+        }
+
+        function formatCurrency(value) {
+            if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+            if (value >= 1e3) return `$${(value / 1e3).toFixed(1)}K`;
+            return `$${value.toFixed(2)}`;
+        }
+
+        function formatPrice(price) {
+            if (price < 0.01) return `$${price.toFixed(6)}`;
+            if (price < 1) return `$${price.toFixed(4)}`;
+            return `$${price.toFixed(2)}`;
+        }
+
+        function renderCoins(coins) {
+            const grid = document.getElementById('coinsGrid');
+            
+            if (coins.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No gems found</h3>
+                        <p>Try adjusting your filters to discover more opportunities</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = coins.map(coin => `
+                <div class="coin-card">
+                    <div class="potential-score">${Math.round(coin.potential_score)}/100</div>
+                    <div class="coin-header">
+                        <div class="coin-name">${coin.name}</div>
+                        <div class="coin-symbol">${coin.symbol}</div>
+                    </div>
+                    <div class="coin-metrics">
+                        <div class="metric">
+                            <span class="metric-label">Price</span>
+                            <span class="metric-value">${formatPrice(coin.price)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">24h Change</span>
+                            <span class="metric-value ${coin.price_change_24h >= 0 ? 'price-positive' : 'price-negative'}">
+                                ${coin.price_change_24h >= 0 ? '+' : ''}${coin.price_change_24h.toFixed(2)}%
+                            </span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Market Cap</span>
+                            <span class="metric-value">${formatCurrency(coin.market_cap)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Volume 24h</span>
+                            <span class="metric-value">${formatCurrency(coin.volume_24h)}</span>
+                        </div>
+                    </div>
+                    <button class="watchlist-btn ${watchlist.includes(coin.id) ? 'added' : ''}" 
+                            onclick="toggleWatchlist('${coin.id}', '${coin.name}')">
+                        ${watchlist.includes(coin.id) ? '⭐ In Watchlist' : '⭐ Add to Watchlist'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function toggleWatchlist(coinId, coinName) {
+            if (watchlist.includes(coinId)) {
+                watchlist = watchlist.filter(id => id !== coinId);
+            } else {
+                watchlist.push(coinId);
+            }
+            
+            await db.set("watchlist", watchlist);
+            updateWatchlistCount();
+            
+            // Update button
+            const buttons = document.querySelectorAll('.watchlist-btn');
+            buttons.forEach(btn => {
+                if (btn.onclick.toString().includes(coinId)) {
+                    if (watchlist.includes(coinId)) {
+                        btn.classList.add('added');
+                        btn.textContent = '⭐ In Watchlist';
+                    } else {
+                        btn.classList.remove('added');
+                        btn.textContent = '⭐ Add to Watchlist';
+                    }
+                }
+            });
+        }
+
+        function updateStats(coins) {
+            const statsBar = document.getElementById('statsBar');
+            const totalCoins = document.getElementById('totalCoins');
+            const avgPotential = document.getElementById('avgPotential');
+            
+            totalCoins.textContent = coins.length;
+            
+            if (coins.length > 0) {
+                const avgScore = coins.reduce((sum, coin) => sum + coin.potential_score, 0) / coins.length;
+                avgPotential.textContent = Math.round(avgScore);
+                statsBar.style.display = 'grid';
+            }
+        }
+
+        function updateWatchlistCount() {
+            const watchlistCount = document.getElementById('watchlistCount');
+            if (watchlistCount) {
+                watchlistCount.textContent = watchlist.length;
+            }
+        }
+
+        async function searchCoins() {
+            const searchBtn = document.getElementById('searchBtn');
+            searchBtn.disabled = true;
+            searchBtn.textContent = '🔍 Searching...';
+            
+            const filters = {
+                maxMarketCap: parseInt(document.getElementById('maxMarketCap').value),
+                minVolume: parseInt(document.getElementById('minVolume').value),
+                minPriceChange: parseFloat(document.getElementById('minPriceChange').value),
+                sortBy: document.getElementById('sortBy').value
+            };
+
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            currentCoins = generateMockCoins(filters);
+            renderCoins(currentCoins);
+            updateStats(currentCoins);
+            
+            searchBtn.disabled = false;
+            searchBtn.textContent = '🔍 Find Hidden Gems';
+        }
+
+        // Event listeners
+        document.getElementById('searchBtn').addEventListener('click', searchCoins);
+
+        // Auto-search on filter change
+        ['maxMarketCap', 'minVolume', 'minPriceChange', 'sortBy'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                if (currentCoins.length > 0) {
+                    searchCoins();
+                }
+            });
+        });
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
