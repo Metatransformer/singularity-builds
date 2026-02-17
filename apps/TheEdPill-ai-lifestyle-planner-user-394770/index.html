@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "TheEdPill-ai-lifestyle-planner-user-394770";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Lifestyle Planner</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #222;
+            --accent: #00d4ff;
+            --accent-hover: #00bfea;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-muted: #777;
+            --border: #333;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px 0;
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent), #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            color: var(--text-secondary);
+        }
+
+        .form-section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        input, textarea, select {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .results h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: var(--accent);
+            text-align: center;
+        }
+
+        .recommendations {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        }
+
+        .recommendation-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .recommendation-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 212, 255, 0.1);
+            border-color: var(--accent);
+        }
+
+        .recommendation-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), #00ff88);
+        }
+
+        .difficulty-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .difficulty-beginner {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .difficulty-intermediate {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .difficulty-advanced {
+            background: rgba(255, 68, 68, 0.2);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .recommendation-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .tool-info {
+            background: var(--bg-card);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+            border-left: 3px solid var(--accent);
+        }
+
+        .tool-name {
+            font-weight: 600;
+            color: var(--accent);
+            font-size: 0.95rem;
+        }
+
+        .tool-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .steps {
+            margin-top: 16px;
+        }
+
+        .steps h4 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 8px 0;
+        }
+
+        .step-number {
+            background: var(--accent);
+            color: var(--bg-primary);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .step-text {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+        }
+
+        .saved-plans {
+            margin-top: 40px;
+            padding: 20px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .saved-plans h3 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .saved-plan {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .saved-plan-info {
+            flex: 1;
+        }
+
+        .saved-plan-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .saved-plan-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .saved-plan-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-small:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .recommendations {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .form-section {
+                padding: 20px;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>AI Lifestyle Planner</h1>
+            <p>Discover personalized ways to integrate AI tools into your daily workflow</p>
+        </header>
+
+        <div class="form-section fade-in">
+            <form id="plannerForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="job">Current Job/Role</label>
+                        <input type="text" id="job" placeholder="e.g., Marketing Manager, Student, Freelance Designer" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="experience">Experience Level</label>
+                        <select id="experience" required>
+                            <option value="">Select your experience</option>
+                            <option value="beginner">Beginner (0-2 years)</option>
+                            <option value="intermediate">Intermediate (3-5 years)</option>
+                            <option value="senior">Senior (6+ years)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="skills">Key Skills & Interests</label>
+                        <textarea id="skills" placeholder="e.g., Content writing, data analysis, social media, coding, design, photography..." required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="goals">Current Goals & Challenges</label>
+                        <textarea id="goals" placeholder="e.g., Increase productivity, learn new skills, automate repetitive tasks, improve content quality..." required></textarea>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="submit" class="btn" id="generateBtn">Generate AI Plan</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Generating your personalized AI recommendations...</p>
+        </div>
+
+        <div class="results" id="results">
+            <h2>Your Personalized AI Action Plan</h2>
+            <div class="recommendations" id="recommendations"></div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn" id="saveBtn">Save This Plan</button>
+                <button class="btn btn-small" id="newPlanBtn" style="margin-left: 10px;">Create New Plan</button>
+            </div>
+        </div>
+
+        <div class="saved-plans" id="savedPlans" style="display: none;">
+            <h3>Saved Plans</h3>
+            <div id="savedPlansList"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentPlan = null;
+
+        const aiTools = {
+            beginner: [
+                { name: "ChatGPT", description: "Conversational AI for writing, brainstorming, and problem-solving", difficulty: "beginner" },
+                { name: "Grammarly", description: "AI writing assistant for grammar and style improvement", difficulty: "beginner" },
+                { name: "Canva AI", description: "AI-powered design tool for creating graphics and presentations", difficulty: "beginner" },
+                { name: "Notion AI", description: "AI writing assistant integrated into your workspace", difficulty: "beginner" },
+                { name: "Loom AI", description: "AI-powered video messaging and screen recording", difficulty: "beginner" }
+            ],
+            intermediate: [
+                { name: "Claude AI", description: "Advanced AI assistant for complex analysis and reasoning", difficulty: "intermediate" },
+                { name: "Midjourney", description: "AI image generation for creative projects", difficulty: "intermediate" },
+                { name: "GitHub Copilot", description: "AI code completion and programming assistant", difficulty: "intermediate" },
+                { name: "Zapier AI", description: "Workflow automation with AI-powered triggers", difficulty: "intermediate" },
+                { name: "Jasper AI", description: "AI content creation for marketing and copywriting", difficulty: "intermediate" }
+            ],
+            advanced: [
+                { name: "Custom GPT Models", description: "Fine-tuned AI models for specific use cases", difficulty: "advanced" },
+                { name: "LangChain", description: "Framework for building AI-powered applications", difficulty: "advanced" },
+                { name: "Stable Diffusion", description: "Open-source AI image generation with full control", difficulty: "advanced" },
+                { name: "OpenAI API", description: "Direct integration of AI capabilities into applications", difficulty: "advanced" },
+                { name: "AutoGPT", description: "Autonomous AI agents for complex task execution", difficulty: "advanced" }
+            ]
+        };
+
+        const recommendationTemplates = {
+            "marketing": {
+                beginner: [
+                    {
+                        title: "Automate Social Media Content Creation",
+                        tool: "ChatGPT",
+                        steps: [
+                            "Open ChatGPT and create a new conversation",
+                            "Prompt: 'Create 5 engaging social media posts for [your industry] focusing on [specific topic]'",
+                            "Ask for different formats: LinkedIn professional, Instagram casual, Twitter threads",
+                            "Request hashtag suggestions and optimal posting times",
+                            "Copy and schedule posts using your preferred social media scheduler"
+                        ]
+                    },
+                    {
+                        title: "Design Professional Graphics in Minutes",
+                        tool: "Canva AI",
+                        steps: [
+                            "Sign up for Canva and access the AI design features",
+                            "Use 'Magic Design' and describe your vision: 'Instagram post for software launch'",
+                            "Let AI generate multiple design options based on your brand colors",
+                            "Customize text, images, and layouts with AI suggestions",
+                            "Export and use across all your marketing channels"
+                        ]
+                    }
+                ]
+            },
+            "developer": {
+                intermediate: [
+                    {
+                        title: "Accelerate Coding with AI Pair Programming",
+                        tool: "GitHub Copilot",
+                        steps: [
+                            "Install GitHub Copilot extension in VS Code",
+                            "Start typing function names or comments describing what you want to build",
+                            "Review and accept AI-generated code suggestions with Tab",
+                            "Use Ctrl+Enter to see alternative implementations",
+                            "Ask Copilot to explain complex code sections or debug issues"
+                        ]
+                    }
+                ]
+            }
+        };
+
+        async function init() {
+            try {
+                const savedPlans = await db.get("userPlans") || [];
+                if (savedPlans.length > 0) {
+                    displaySavedPlans(savedPlans);
+                }
+                
+                // Load last form data
+                const lastFormData = await db.get("lastFormData");
+                if (lastFormData) {
+                    document.getElementById('job').value = lastFormData.job || '';
+                    document.getElementById('experience').value = lastFormData.experience || '';
+                    document.getElementById('skills').value = lastFormData.skills || '';
+                    document.getElementById('goals').value = lastFormData.goals || '';
+                }
+            } catch (error) {
+                console.error('Error loading saved data:', error);
+            }
+        }
+
+        function generateRecommendations(formData) {
+            const job = formData.job.toLowerCase();
+            const experience = formData.experience;
+            const skills = formData.skills.toLowerCase();
+            const goals = formData.goals.toLowerCase();
+
+            const recommendations = [];
+            const availableTools = aiTools[experience] || aiTools.beginner;
+
+            // Content Creation Recommendation
+            if (skills.includes('writing') || skills.includes('content') || skills.includes('marketing') || goals.includes('content')) {
+                recommendations.push({
+                    title: "Transform Your Content Creation Process",
+                    tool: experience === 'beginner' ? aiTools.beginner[0] : aiTools.intermediate[4],
+                    steps: [
+                        "Start with a content brief: topic, audience, tone, and key points",
+                        "Use AI to generate an outline and multiple angle variations",
+                        "Create first draft with AI, then add your unique insights and expertise",
+                        "Use AI for editing: grammar, flow, SEO optimization, and readability",
+                        "Generate variations for different platforms (blog, social, email)"
+                    ]
+                });
+            }
+
+            // Automation Recommendation
+            if (goals.includes('productivity') || goals.includes('automat') || goals.includes('efficiency')) {
+                recommendations.push({
+                    title: "Automate Repetitive Tasks and Workflows",
+                    tool: experience === 'advanced' ? aiTools.advanced[1] : aiTools.intermediate[3],
+                    steps: [
+                        "Identify 3 tasks you do repeatedly (emails, data entry, scheduling)",
+                        "Map out your current workflow step-by-step",
+                        "Set up AI-powered automation triggers based on events or schedules",
+                        "Create conditional logic: if X happens, then Y action occurs",
+                        "Test automations with small batches before full deployment"
+                    ]
+                });
+            }
+
+            // Visual/Design Recommendation
+            if (skills.includes('design') || skills.includes('visual') || skills.includes('creative') || job.includes('design')) {
+                const designTool = experience === 'advanced' ? aiTools.advanced[2] : aiTools.beginner[2];
+                recommendations.push({
+                    title: "Create Professional Visuals Without Design Experience",
+                    tool: designTool,
+                    steps: [
+                        "Define your visual requirements: style, colors, dimensions, purpose",
+                        "Write detailed prompts describing your vision and brand aesthetic",
+                        "Generate multiple variations and iterate on the best options",
+                        "Use AI upscaling tools to enhance image quality and resolution",
+                        "Create a consistent visual library for future projects"
+                    ]
+                });
+            }
+
+            // Data/Analysis Recommendation
+            if (skills.includes('data') || skills.includes('analysis') || goals.includes('insights') || job.includes('analyst')) {
+                recommendations.push({
+                    title: "Enhance Data Analysis and Reporting",
+                    tool: experience === 'beginner' ? aiTools.beginner[3] : aiTools.intermediate[0],
+                    steps: [
+                        "Upload your dataset or share data context with AI",
+                        "Ask AI to identify patterns, trends, and anomalies in your data",
+                        "Request specific analysis: correlations, predictions, or comparisons",
+                        "Generate executive summaries and actionable insights",
+                        "Create visualization suggestions and interpretation guidelines"
+                    ]
+                });
+            }
+
+            // Learning/Skill Development
+            if (goals.includes('learn') || goals.includes('skill') || goals.includes('grow')) {
+                recommendations.push({
+                    title: "Accelerate Learning and Skill Development",
+                    tool: aiTools.beginner[0],
+                    steps: [
+                        "Define specific skills you want to develop with measurable goals",
+                        "Ask AI to create a personalized learning curriculum with milestones",
+                        "Use AI as a practice partner: mock interviews, coding challenges, etc.",
+                        "Get instant feedback and suggestions for improvement on your work",
+                        "Create daily learning routines with AI-generated exercises and quizzes"
+                    ]
+                });
+            }
+
+            // Ensure we have at least 5 recommendations
+            while (recommendations.length < 5) {
+                const randomTool = availableTools[Math.floor(Math.random() * availableTools.length)];
+                const generalRecs = [
+                    {
+                        title: "Streamline Communication and Emails",
+                        tool: randomTool,
+                        steps: [
+                            "Create templates for common email types (follow-ups, proposals, updates)",
+                            "Use AI to draft personalized responses based on context and tone",
+                            "Generate meeting summaries and action items automatically",
+                            "Improve clarity and professionalism with AI writing assistance",
+                            "Set up AI-powered auto-replies for frequently asked questions"
+                        ]
+                    },
+                    {
+                        title: "Optimize Decision Making with AI Insights",
+                        tool: randomTool,
+                        steps: [
+                            "Present complex decisions to AI with all relevant context and constraints",
+                            "Request pros/cons analysis with weighted scoring for each option",
+                            "Ask for potential risks and mitigation strategies for top choices",
+                            "Generate scenario planning: best case, worst case, most likely outcomes",
+                            "Use AI to challenge your assumptions and identify blind spots"
+                        ]
+                    },
+                    {
+                        title: "Enhance Research and Information Gathering",
+                        tool: randomTool,
+                        steps: [
+                            "Define research questions and scope clearly before starting",
+                            "Use AI to suggest relevant sources, keywords, and research angles",
+                            "Summarize long documents and extract key insights quickly",
+                            "Cross-reference information and identify potential biases or gaps",
+                            "Generate research reports with proper citations and methodology"
+                        ]
+                    }
+                ];
+                
+                const randomRec = generalRecs[Math.floor(Math.random() * generalRecs.length)];
+                if (!recommendations.some(r => r.title === randomRec.title)) {
+                    recommendations.push(randomRec);
+                }
+            }
+
+            return recommendations.slice(0, 5);
+        }
+
+        function displayRecommendations(recommendations) {
+            const container = document.getElementById('recommendations');
+            container.innerHTML = '';
+
+            recommendations.forEach((rec, index) => {
+                const card = document.createElement('div');
+                card.className = 'recommendation-card fade-in';
+                card.style.animationDelay = `${index * 0.1}s`;
+
+                const difficultyClass = `difficulty-${rec.tool.difficulty}`;
+                const difficultyText = rec.tool.difficulty.charAt(0).toUpperCase() + rec.tool.difficulty.slice(1);
+
+                card.innerHTML = `
+                    <div class="difficulty-badge ${difficultyClass}">${difficultyText}</div>
+                    <h3 class="recommendation-title">${rec.title}</h3>
+                    <div class="tool-info">
+                        <div class="tool-name">Recommended Tool: ${rec.tool.name}</div>
+                        <div class="tool-description">${rec.tool.description}</div>
+                    </div>
+                    <div class="steps">
+                        <h4>Step-by-Step Guide:</h4>
+                        ${rec.steps.map((step, i) => `
+                            <div class="step">
+                                <div class="step-number">${i + 1}</div>
+                                <div class="step-text">${step}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function displaySavedPlans(plans) {
+            const container = document.getElementById('savedPlansList');
+            const savedPlansSection = document.getElementById('savedPlans');
+
+            if (plans.length === 0) {
+                savedPlansSection.style.display = 'none';
+                return;
+            }
+
+            savedPlansSection.style.display = 'block';
+            container.innerHTML = '';
+
+            plans.forEach((plan, index) => {
+                const planDiv = document.createElement('div');
+                planDiv.className = 'saved-plan';
+                planDiv.innerHTML = `
+                    <div class="saved-plan-info">
+                        <div class="saved-plan-title">${plan.job} - ${plan.experience}</div>
+                        <div class="saved-plan-meta">Saved ${new Date(plan.savedAt).toLocaleDateString()}</div>
+                    </div>
+                    <div class="saved-plan-actions">
+                        <button class="btn-small" onclick="loadPlan(${index})">Load</button>
+                        <button class="btn-small" onclick="deletePlan(${index})">Delete</button>
+                    </div>
+                `;
+                container.appendChild(planDiv);
+            });
+        }
+
+        async function loadPlan(index) {
+            try {
+                const savedPlans = await db.get("userPlans") || [];
+                const plan = savedPlans[index];
+                
+                if (plan) {
+                    document.getElementById('job').value = plan.job;
+                    document.getElementById('experience').value = plan.experience;
+                    document.getElementById('skills').value = plan.skills;
+                    document.getElementById('goals').value = plan.goals;
+                    
+                    currentPlan = plan.recommendations;
+                    displayRecommendations(plan.recommendations);
+                }
+            } catch (error) {
+                console.error('Error loading plan:', error);
+            }
+        }
+
+        async function deletePlan(index) {
+            try {
+                const savedPlans = await db.get("userPlans") || [];
+                savedPlans.splice(index, 1);
+                await db.set("userPlans", savedPlans);
+                displaySavedPlans(savedPlans);
+            } catch (error) {
+                console.error('Error deleting plan:', error);
+            }
+        }
+
+        document.getElementById('plannerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                job: document.getElementById('job').value,
+                experience: document.getElementById('experience').value,
+                skills: document.getElementById('skills').value,
+                goals: document.getElementById('goals').value
+            };
+
+            // Save form data for next time
+            try {
+                await db.set("lastFormData", formData);
+            } catch (error) {
+                console.error('Error saving form data:', error);
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+
+            // Simulate AI processing time
+            setTimeout(() => {
+                const recommendations = generateRecommendations(formData);
+                currentPlan = recommendations.map(rec => ({
+                    ...rec,
+                    tool: {
+                        name: rec.tool.name,
+                        description: rec.tool.description,
+                        difficulty: rec.tool.difficulty
+                    }
+                }));
+
+                document.getElementById('loading').style.display = 'none';
+                displayRecommendations(currentPlan);
+            }, 2000);
+        });
+
+        document.getElementById('saveBtn').addEventListener('click', async function() {
+            if (!currentPlan) return;
+
+            const formData = {
+                job: document.getElementById('job').value,
+                experience: document.getElementById('experience').value,
+                skills: document.getElementById('skills').value,
+                goals: document.getElementById('goals').value,
+                recommendations: currentPlan,
+                savedAt: new Date().toISOString()
+            };
+
+            try {
+                const savedPlans = await db.get("userPlans") || [];
+                savedPlans.unshift(formData); // Add to beginning
+                
+                // Keep only last 10 plans
+                if (savedPlans.length > 10) {
+                    savedPlans.splice(10);
+                }
+                
+                await db.set("userPlans", savedPlans);
+                displaySavedPlans(savedPlans);
+                
+                // Show success feedback
+                const btn = document.getElementById('saveBtn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Saved!';
+                btn.style.background = '#00ff88';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            } catch (error) {
+                console.error('Error saving plan:', error);
+            }
+        });
+
+        document.getElementById('newPlanBtn').addEventListener('click', function() {
+            document.getElementById('plannerForm').reset();
+            document.getElementById('results').style.display = 'none';
+            currentPlan = null;
+            document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // Initialize the app
+        init();
+    </script>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+</body>
+</html>
