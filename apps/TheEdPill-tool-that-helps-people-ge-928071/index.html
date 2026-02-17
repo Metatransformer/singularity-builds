@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "TheEdPill-tool-that-helps-people-ge-928071";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Getting Started Guide</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #222;
+            --accent: #00d4ff;
+            --text-primary: #e0e0e0;
+            --text-secondary: #999;
+            --border: #333;
+            --success: #00ff88;
+            --warning: #ffaa00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            display: grid;
+            place-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent), #00ff88);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .progress-tracker {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.2s forwards;
+        }
+
+        .progress-bar {
+            background: var(--bg-secondary);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #00ff88);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .sections {
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        .section:nth-child(1) { animation-delay: 0.3s; }
+        .section:nth-child(2) { animation-delay: 0.4s; }
+        .section:nth-child(3) { animation-delay: 0.5s; }
+        .section:nth-child(4) { animation-delay: 0.6s; }
+
+        .section:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+        }
+
+        .section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .icon {
+            font-size: 1.2em;
+        }
+
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checklist li:hover {
+            background: var(--bg-secondary);
+            margin: 0 -1rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            border-radius: 6px;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox.checked {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 2px;
+            color: var(--bg-primary);
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .task-text {
+            flex: 1;
+            transition: opacity 0.2s ease;
+        }
+
+        .task-text.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+
+        .tips {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(0, 255, 136, 0.05));
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .tip {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .tip:last-child {
+            margin-bottom: 0;
+        }
+
+        .resources {
+            margin-top: 1.5rem;
+        }
+
+        .resource-link {
+            display: inline-block;
+            background: var(--bg-secondary);
+            color: var(--accent);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            margin: 0.25rem;
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .resource-link:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--success);
+            color: var(--bg-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            font-weight: 500;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sections {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>🤖 AI Getting Started Guide</h1>
+            <p class="subtitle">Your roadmap to understanding and using AI tools effectively</p>
+        </header>
+
+        <div class="progress-tracker">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Ready to begin your AI journey!</div>
+        </div>
+
+        <div class="sections">
+            <div class="section">
+                <h2><span class="icon">🎯</span>Understanding AI Basics</h2>
+                <ul class="checklist" data-section="basics">
+                    <li data-task="what-is-ai">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Learn what AI actually is (not just sci-fi!)</div>
+                    </li>
+                    <li data-task="types-of-ai">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Understand different types of AI tools</div>
+                    </li>
+                    <li data-task="ai-limitations">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Know AI's current limitations</div>
+                    </li>
+                    <li data-task="ethics-basics">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Learn about AI ethics and responsible use</div>
+                    </li>
+                </ul>
+                <div class="tips">
+                    <div class="tip">💡 AI is a tool, not magic - it has strengths and weaknesses</div>
+                    <div class="tip">💡 Start with simple, practical applications</div>
+                    <div class="tip">💡 Always verify important AI-generated information</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2><span class="icon">🛠️</span>Essential AI Tools</h2>
+                <ul class="checklist" data-section="tools">
+                    <li data-task="chatgpt-setup">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Set up ChatGPT or similar chat AI</div>
+                    </li>
+                    <li data-task="image-ai">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Try an AI image generator (DALL-E, Midjourney)</div>
+                    </li>
+                    <li data-task="productivity-ai">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Explore AI productivity tools (Grammarly, Notion AI)</div>
+                    </li>
+                    <li data-task="code-ai">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Test AI coding assistants (if relevant)</div>
+                    </li>
+                </ul>
+                <div class="resources">
+                    <a href="#" class="resource-link">Free AI Tools List</a>
+                    <a href="#" class="resource-link">Setup Guides</a>
+                    <a href="#" class="resource-link">Comparison Chart</a>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2><span class="icon">✍️</span>Effective Prompting</h2>
+                <ul class="checklist" data-section="prompting">
+                    <li data-task="clear-requests">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Practice writing clear, specific requests</div>
+                    </li>
+                    <li data-task="context-providing">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Learn to provide helpful context</div>
+                    </li>
+                    <li data-task="iterative-prompting">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Master iterative refinement techniques</div>
+                    </li>
+                    <li data-task="role-prompting">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Try role-based prompting ("Act as...")</div>
+                    </li>
+                </ul>
+                <div class="tips">
+                    <div class="tip">💡 Be specific about format, length, and style</div>
+                    <div class="tip">💡 Ask follow-up questions to refine outputs</div>
+                    <div class="tip">💡 Save your best prompt templates</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2><span class="icon">🚀</span>Real-World Applications</h2>
+                <ul class="checklist" data-section="applications">
+                    <li data-task="work-integration">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Identify AI opportunities in your work</div>
+                    </li>
+                    <li data-task="personal-projects">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Use AI for a personal project</div>
+                    </li>
+                    <li data-task="learning-aid">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Try AI as a learning/research assistant</div>
+                    </li>
+                    <li data-task="creative-projects">
+                        <div class="checkbox"></div>
+                        <div class="task-text">Experiment with creative AI applications</div>
+                    </li>
+                </ul>
+                <div class="tips">
+                    <div class="tip">💡 Start small - automate simple, repetitive tasks</div>
+                    <div class="tip">💡 Document what works and what doesn't</div>
+                    <div class="tip">💡 Share your learnings with others</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="completedTasks">0</div>
+                <div class="stat-label">Tasks Completed</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="completionRate">0%</div>
+                <div class="stat-label">Progress</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="sectionsComplete">0</div>
+                <div class="stat-label">Sections Complete</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let userProgress = {};
+        const totalTasks = document.querySelectorAll('[data-task]').length;
+
+        async function init() {
+            try {
+                userProgress = await db.get('aiGuideProgress') || {};
+                renderProgress();
+                setupEventListeners();
+                hideLoader();
+            } catch (error) {
+                console.error('Failed to load progress:', error);
+                hideLoader();
+            }
+        }
+
+        function hideLoader() {
+            const loader = document.getElementById('loader');
+            loader.classList.add('hidden');
+        }
+
+        function setupEventListeners() {
+            document.querySelectorAll('[data-task]').forEach(taskItem => {
+                taskItem.addEventListener('click', () => {
+                    const taskId = taskItem.dataset.task;
+                    toggleTask(taskId);
+                });
+            });
+        }
+
+        async function toggleTask(taskId) {
+            userProgress[taskId] = !userProgress[taskId];
+            
+            try {
+                await db.set('aiGuideProgress', userProgress);
+                renderProgress();
+                showToast(userProgress[taskId] ? 'Task completed! 🎉' : 'Task unmarked');
+            } catch (error) {
+                console.error('Failed to save progress:', error);
+                showToast('Failed to save progress');
+            }
+        }
+
+        function renderProgress() {
+            // Update task checkboxes
+            document.querySelectorAll('[data-task]').forEach(taskItem => {
+                const taskId = taskItem.dataset.task;
+                const checkbox = taskItem.querySelector('.checkbox');
+                const text = taskItem.querySelector('.task-text');
+                
+                if (userProgress[taskId]) {
+                    checkbox.classList.add('checked');
+                    text.classList.add('completed');
+                } else {
+                    checkbox.classList.remove('checked');
+                    text.classList.remove('completed');
+                }
+            });
+
+            // Update stats
+            const completedCount = Object.values(userProgress).filter(Boolean).length;
+            const progressPercent = Math.round((completedCount / totalTasks) * 100);
+            
+            document.getElementById('completedTasks').textContent = completedCount;
+            document.getElementById('completionRate').textContent = progressPercent + '%';
+            document.getElementById('progressFill').style.width = progressPercent + '%';
+
+            // Count completed sections
+            const sections = ['basics', 'tools', 'prompting', 'applications'];
+            let sectionsComplete = 0;
+            
+            sections.forEach(section => {
+                const sectionTasks = document.querySelectorAll(`[data-section="${section}"] [data-task]`);
+                const completedInSection = Array.from(sectionTasks).filter(task => 
+                    userProgress[task.dataset.task]
+                ).length;
+                
+                if (completedInSection === sectionTasks.length) {
+                    sectionsComplete++;
+                }
+            });
+            
+            document.getElementById('sectionsComplete').textContent = sectionsComplete;
+
+            // Update progress text
+            const progressText = document.getElementById('progressText');
+            if (progressPercent === 0) {
+                progressText.textContent = 'Ready to begin your AI journey!';
+            } else if (progressPercent < 25) {
+                progressText.textContent = 'Great start! Keep exploring...';
+            } else if (progressPercent < 50) {
+                progressText.textContent = 'You\'re building momentum!';
+            } else if (progressPercent < 75) {
+                progressText.textContent = 'More than halfway there!';
+            } else if (progressPercent < 100) {
+                progressText.textContent = 'Almost there! Finish strong!';
+            } else {
+                progressText.textContent = 'Congratulations! You\'re AI-ready! 🚀';
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
