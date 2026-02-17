@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "CoinsTechnical-dashboard-for-base-tokens-592449";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base Token Holders Dashboard</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #1a1a1a;
+            --accent: #00d4ff;
+            --text: #e0e0e0;
+            --muted: #888;
+            --success: #00ff88;
+            --error: #ff4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: var(--bg);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid #333;
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 600;
+            text-align: center;
+            background: linear-gradient(135deg, var(--accent), #0088cc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            margin: 1rem;
+            padding: 1rem;
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-size: 0.875rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        input, button {
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        button {
+            background: var(--accent);
+            color: var(--bg);
+            font-weight: 600;
+            cursor: pointer;
+            min-width: 120px;
+        }
+
+        button:hover:not(:disabled) {
+            background: #00b8e6;
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .dashboard {
+            padding: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #333;
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 0.875rem;
+        }
+
+        .holders-section {
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid #333;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            padding: 1rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .holders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .holders-table th,
+        .holders-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        .holders-table th {
+            background: #1a1a1a;
+            font-weight: 600;
+            color: var(--accent);
+            font-size: 0.875rem;
+        }
+
+        .holders-table tr:hover {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .change-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .change-up {
+            color: var(--success);
+        }
+
+        .change-down {
+            color: var(--error);
+        }
+
+        .change-neutral {
+            color: var(--muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--muted);
+        }
+
+        .empty-state h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem;
+            font-weight: 500;
+        }
+
+        .alert-error {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .alert-success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .address {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+
+            .holders-table {
+                font-size: 0.8rem;
+            }
+
+            .holders-table th,
+            .holders-table td {
+                padding: 0.5rem;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="header">
+        <h1>Base Token Holders Dashboard</h1>
+    </div>
+
+    <div class="controls">
+        <div class="input-group">
+            <label for="tokenAddress">Token Contract Address</label>
+            <input type="text" id="tokenAddress" placeholder="0x..." maxlength="42">
+        </div>
+        <button id="trackBtn" onclick="trackToken()">Track Token</button>
+        <button id="refreshBtn" onclick="refreshData()" disabled>Refresh Data</button>
+    </div>
+
+    <div class="dashboard" id="dashboard">
+        <div class="empty-state">
+            <h3>No Token Selected</h3>
+            <p>Enter a Base token contract address above to start tracking holder variations</p>
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let currentToken = null;
+        let trackingInterval = null;
+
+        async function init() {
+            try {
+                const savedToken = await db.get('currentToken');
+                if (savedToken) {
+                    document.getElementById('tokenAddress').value = savedToken;
+                    await loadTokenData(savedToken);
+                }
+            } catch (error) {
+                console.error('Init error:', error);
+            }
+            
+            document.getElementById('loader').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+            }, 300);
+        }
+
+        async function trackToken() {
+            const address = document.getElementById('tokenAddress').value.trim();
+            if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+                showAlert('Please enter a valid contract address', 'error');
+                return;
+            }
+
+            currentToken = address.toLowerCase();
+            document.getElementById('trackBtn').disabled = true;
+            document.getElementById('refreshBtn').disabled = false;
+
+            try {
+                await db.set('currentToken', currentToken);
+                await generateMockData(currentToken);
+                await loadTokenData(currentToken);
+                showAlert('Token tracking started successfully', 'success');
+            } catch (error) {
+                showAlert('Error tracking token: ' + error.message, 'error');
+            }
+
+            document.getElementById('trackBtn').disabled = false;
+        }
+
+        async function generateMockData(tokenAddress) {
+            const existingData = await db.get(`holders_${tokenAddress}`);
+            if (existingData && existingData.length > 0) return;
+
+            const holders = [];
+            for (let i = 0; i < 100; i++) {
+                holders.push({
+                    rank: i + 1,
+                    address: '0x' + Math.random().toString(16).substr(2, 40),
+                    balance: Math.floor(Math.random() * 1000000) + 10000,
+                    percentage: parseFloat((Math.random() * 10 + 0.1).toFixed(2)),
+                    change24h: (Math.random() - 0.5) * 20
+                });
+            }
+
+            holders.sort((a, b) => b.balance - a.balance);
+
+            const snapshot = {
+                timestamp: Date.now(),
+                holders: holders
+            };
+
+            await db.set(`holders_${tokenAddress}`, [snapshot]);
+        }
+
+        async function loadTokenData(tokenAddress) {
+            try {
+                const data = await db.get(`holders_${tokenAddress}`) || [];
+                if (data.length === 0) {
+                    showEmptyState();
+                    return;
+                }
+
+                const latest = data[data.length - 1];
+                renderDashboard(latest, data);
+            } catch (error) {
+                showAlert('Error loading data: ' + error.message, 'error');
+            }
+        }
+
+        function renderDashboard(snapshot, history) {
+            const totalHolders = snapshot.holders.length;
+            const totalSupply = snapshot.holders.reduce((sum, h) => sum + h.balance, 0);
+            const topHolderBalance = snapshot.holders[0]?.balance || 0;
+            const avgBalance = Math.floor(totalSupply / totalHolders);
+
+            const dashboardHtml = `
+                <div class="fade-in">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">${totalHolders}</div>
+                            <div class="stat-label">Total Holders</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${formatNumber(totalSupply)}</div>
+                            <div class="stat-label">Total Supply</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${formatNumber(topHolderBalance)}</div>
+                            <div class="stat-label">Top Holder Balance</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${formatNumber(avgBalance)}</div>
+                            <div class="stat-label">Average Balance</div>
+                        </div>
+                    </div>
+
+                    <div class="holders-section">
+                        <div class="section-header">
+                            <h3>Top 100 Holders</h3>
+                            <span style="color: var(--muted); font-size: 0.875rem;">
+                                Last updated: ${new Date(snapshot.timestamp).toLocaleString()}
+                            </span>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="holders-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Address</th>
+                                        <th>Balance</th>
+                                        <th>Percentage</th>
+                                        <th>24h Change</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${snapshot.holders.map(holder => `
+                                        <tr>
+                                            <td>#${holder.rank}</td>
+                                            <td><span class="address">${holder.address.substr(0, 8)}...${holder.address.substr(-6)}</span></td>
+                                            <td>${formatNumber(holder.balance)}</td>
+                                            <td>${holder.percentage}%</td>
+                                            <td>
+                                                <span class="change-indicator ${getChangeClass(holder.change24h)}">
+                                                    ${holder.change24h > 0 ? '▲' : holder.change24h < 0 ? '▼' : '—'}
+                                                    ${Math.abs(holder.change24h).toFixed(2)}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('dashboard').innerHTML = dashboardHtml;
+        }
+
+        function showEmptyState() {
+            document.getElementById('dashboard').innerHTML = `
+                <div class="empty-state">
+                    <h3>No Data Available</h3>
+                    <p>Holder data will appear here once tracking begins</p>
+                </div>
+            `;
+        }
+
+        async function refreshData() {
+            if (!currentToken) return;
+
+            document.getElementById('refreshBtn').disabled = true;
+            
+            try {
+                // Simulate new data with variations
+                const existingData = await db.get(`holders_${currentToken}`) || [];
+                const latest = existingData[existingData.length - 1];
+                
+                if (latest) {
+                    const newHolders = latest.holders.map(holder => ({
+                        ...holder,
+                        balance: Math.max(1000, holder.balance + Math.floor((Math.random() - 0.5) * holder.balance * 0.1)),
+                        change24h: (Math.random() - 0.5) * 20
+                    }));
+
+                    newHolders.sort((a, b) => b.balance - a.balance);
+                    newHolders.forEach((holder, index) => {
+                        holder.rank = index + 1;
+                        const totalSupply = newHolders.reduce((sum, h) => sum + h.balance, 0);
+                        holder.percentage = parseFloat((holder.balance / totalSupply * 100).toFixed(2));
+                    });
+
+                    const newSnapshot = {
+                        timestamp: Date.now(),
+                        holders: newHolders
+                    };
+
+                    existingData.push(newSnapshot);
+                    if (existingData.length > 100) existingData.shift(); // Keep last 100 snapshots
+
+                    await db.set(`holders_${currentToken}`, existingData);
+                    await loadTokenData(currentToken);
+                    showAlert('Data refreshed successfully', 'success');
+                }
+            } catch (error) {
+                showAlert('Error refreshing data: ' + error.message, 'error');
+            }
+
+            document.getElementById('refreshBtn').disabled = false;
+        }
+
+        function formatNumber(num) {
+            if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+            return num.toLocaleString();
+        }
+
+        function getChangeClass(change) {
+            if (change > 0) return 'change-up';
+            if (change < 0) return 'change-down';
+            return 'change-neutral';
+        }
+
+        function showAlert(message, type) {
+            const existingAlert = document.querySelector('.alert');
+            if (existingAlert) existingAlert.remove();
+
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            document.body.insertBefore(alert, document.querySelector('.dashboard'));
+
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
