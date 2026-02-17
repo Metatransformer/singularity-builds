@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "showcase-colorpicker";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Picker Pro</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --accent: #00d4ff;
+            --text: #e0e0e0;
+            --text-muted: #888;
+            --border: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .loading {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            display: grid;
+            place-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: clamp(1rem, 4vw, 2rem);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, var(--accent), #00a8cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .picker-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .picker-section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .picker-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .color-display {
+            width: 100%;
+            height: 120px;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border: 2px solid var(--border);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .color-display::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, 
+                rgba(255,255,255,0.1) 25%, 
+                transparent 25%, 
+                transparent 75%, 
+                rgba(255,255,255,0.1) 75%),
+                linear-gradient(45deg, 
+                rgba(255,255,255,0.1) 25%, 
+                transparent 25%, 
+                transparent 75%, 
+                rgba(255,255,255,0.1) 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .color-display:hover::after {
+            opacity: 1;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 50px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text);
+            font-size: 0.9rem;
+            transition: border-color 0.2s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .format-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .format-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.8rem;
+        }
+
+        .format-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .format-btn.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .copy-btn {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .copy-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+            transform: translateY(-1px);
+        }
+
+        .saved-colors {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .saved-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .saved-color {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .saved-color:hover {
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .save-current {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            background: var(--accent);
+            color: var(--bg-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+
+        .save-current:hover {
+            background: transparent;
+            color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .picker-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .format-buttons {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <h1>Color Picker Pro</h1>
+        
+        <div class="picker-grid">
+            <div class="picker-section">
+                <h2 class="section-title">Color Picker</h2>
+                <div class="color-display" id="colorDisplay"></div>
+                <div class="input-group">
+                    <label for="colorInput">Select Color</label>
+                    <input type="color" id="colorInput" value="#00d4ff">
+                </div>
+            </div>
+
+            <div class="picker-section">
+                <h2 class="section-title">HSL Controls</h2>
+                <div class="input-group">
+                    <label for="hueSlider">Hue: <span id="hueValue">180</span>°</label>
+                    <input type="range" id="hueSlider" min="0" max="360" value="180">
+                </div>
+                <div class="input-group">
+                    <label for="satSlider">Saturation: <span id="satValue">100</span>%</label>
+                    <input type="range" id="satSlider" min="0" max="100" value="100">
+                </div>
+                <div class="input-group">
+                    <label for="lightSlider">Lightness: <span id="lightValue">50</span>%</label>
+                    <input type="range" id="lightSlider" min="0" max="100" value="50">
+                </div>
+            </div>
+
+            <div class="picker-section">
+                <h2 class="section-title">Color Formats</h2>
+                <div class="format-buttons">
+                    <button class="format-btn active" data-format="hex">HEX</button>
+                    <button class="format-btn" data-format="rgb">RGB</button>
+                    <button class="format-btn" data-format="hsl">HSL</button>
+                    <button class="format-btn" data-format="hsv">HSV</button>
+                </div>
+                <div class="input-group">
+                    <label for="colorCode">Color Code</label>
+                    <input type="text" id="colorCode" value="#00d4ff" readonly>
+                </div>
+                <button class="copy-btn" id="copyBtn">Copy to Clipboard</button>
+            </div>
+        </div>
+
+        <div class="saved-colors">
+            <h2 class="section-title">Saved Colors</h2>
+            <button class="save-current" id="saveCurrentBtn">Save Current Color</button>
+            <div class="saved-grid" id="savedGrid">
+                <div class="empty-state">No saved colors yet. Save your first color!</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        class ColorPickerApp {
+            constructor() {
+                this.currentColor = '#00d4ff';
+                this.currentFormat = 'hex';
+                this.savedColors = [];
+                this.init();
+            }
+
+            async init() {
+                await this.loadSavedColors();
+                this.setupEventListeners();
+                this.updateColor(this.currentColor);
+                this.hideLoading();
+            }
+
+            async loadSavedColors() {
+                try {
+                    const saved = await db.get('saved_colors');
+                    this.savedColors = saved || [];
+                    this.renderSavedColors();
+                } catch (error) {
+                    console.error('Failed to load saved colors:', error);
+                }
+            }
+
+            async savePalette() {
+                try {
+                    await db.set('saved_colors', this.savedColors);
+                } catch (error) {
+                    console.error('Failed to save colors:', error);
+                }
+            }
+
+            setupEventListeners() {
+                const colorInput = document.getElementById('colorInput');
+                const hueSlider = document.getElementById('hueSlider');
+                const satSlider = document.getElementById('satSlider');
+                const lightSlider = document.getElementById('lightSlider');
+                const colorCode = document.getElementById('colorCode');
+                const copyBtn = document.getElementById('copyBtn');
+                const saveBtn = document.getElementById('saveCurrentBtn');
+                const formatBtns = document.querySelectorAll('.format-btn');
+
+                colorInput.addEventListener('input', (e) => {
+                    this.updateColor(e.target.value);
+                });
+
+                hueSlider.addEventListener('input', () => this.updateFromHSL());
+                satSlider.addEventListener('input', () => this.updateFromHSL());
+                lightSlider.addEventListener('input', () => this.updateFromHSL());
+
+                colorCode.addEventListener('input', (e) => {
+                    const value = e.target.value.trim();
+                    if (this.isValidColor(value)) {
+                        this.updateColor(value);
+                    }
+                });
+
+                copyBtn.addEventListener('click', () => this.copyToClipboard());
+                saveBtn.addEventListener('click', () => this.saveCurrentColor());
+
+                formatBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        formatBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.currentFormat = btn.dataset.format;
+                        this.updateColorCode();
+                    });
+                });
+            }
+
+            updateFromHSL() {
+                const h = document.getElementById('hueSlider').value;
+                const s = document.getElementById('satSlider').value;
+                const l = document.getElementById('lightSlider').value;
+                
+                document.getElementById('hueValue').textContent = h;
+                document.getElementById('satValue').textContent = s;
+                document.getElementById('lightValue').textContent = l;
+
+                const hslColor = `hsl(${h}, ${s}%, ${l}%)`;
+                this.currentColor = this.hslToHex(h, s, l);
+                this.updateColorDisplay();
+                this.updateColorInput();
+                this.updateColorCode();
+            }
+
+            updateColor(color) {
+                this.currentColor = color;
+                this.updateColorDisplay();
+                this.updateHSLSliders();
+                this.updateColorInput();
+                this.updateColorCode();
+            }
+
+            updateColorDisplay() {
+                document.getElementById('colorDisplay').style.background = this.currentColor;
+            }
+
+            updateColorInput() {
+                document.getElementById('colorInput').value = this.currentColor;
+            }
+
+            updateHSLSliders() {
+                const hsl = this.hexToHsl(this.currentColor);
+                document.getElementById('hueSlider').value = hsl.h;
+                document.getElementById('satSlider').value = hsl.s;
+                document.getElementById('lightSlider').value = hsl.l;
+                document.getElementById('hueValue').textContent = hsl.h;
+                document.getElementById('satValue').textContent = hsl.s;
+                document.getElementById('lightValue').textContent = hsl.l;
+            }
+
+            updateColorCode() {
+                const codeInput = document.getElementById('colorCode');
+                codeInput.readOnly = false;
+                
+                switch (this.currentFormat) {
+                    case 'hex':
+                        codeInput.value = this.currentColor;
+                        break;
+                    case 'rgb':
+                        codeInput.value = this.hexToRgb(this.currentColor);
+                        break;
+                    case 'hsl':
+                        const hsl = this.hexToHsl(this.currentColor);
+                        codeInput.value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+                        break;
+                    case 'hsv':
+                        const hsv = this.hexToHsv(this.currentColor);
+                        codeInput.value = `hsv(${hsv.h}, ${hsv.s}%, ${hsv.v}%)`;
+                        break;
+                }
+            }
+
+            async saveCurrentColor() {
+                if (!this.savedColors.includes(this.currentColor)) {
+                    this.savedColors.push(this.currentColor);
+                    await this.savePalette();
+                    this.renderSavedColors();
+                    this.showToast('Color saved!');
+                } else {
+                    this.showToast('Color already saved');
+                }
+            }
+
+            renderSavedColors() {
+                const grid = document.getElementById('savedGrid');
+                
+                if (this.savedColors.length === 0) {
+                    grid.innerHTML = '<div class="empty-state">No saved colors yet. Save your first color!</div>';
+                    return;
+                }
+
+                grid.innerHTML = this.savedColors.map((color, index) => `
+                    <div class="saved-color" style="background: ${color}" 
+                         onclick="app.selectSavedColor('${color}')"
+                         oncontextmenu="app.deleteSavedColor(event, ${index})"
+                         title="${color}"></div>
+                `).join('');
+            }
+
+            selectSavedColor(color) {
+                this.updateColor(color);
+            }
+
+            async deleteSavedColor(event, index) {
+                event.preventDefault();
+                this.savedColors.splice(index, 1);
+                await this.savePalette();
+                this.renderSavedColors();
+                this.showToast('Color removed');
+            }
+
+            copyToClipboard() {
+                const codeInput = document.getElementById('colorCode');
+                navigator.clipboard.writeText(codeInput.value).then(() => {
+                    this.showToast('Copied to clipboard!');
+                }).catch(() => {
+                    // Fallback for older browsers
+                    codeInput.select();
+                    document.execCommand('copy');
+                    this.showToast('Copied to clipboard!');
+                });
+            }
+
+            showToast(message) {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 2000);
+            }
+
+            hideLoading() {
+                setTimeout(() => {
+                    document.getElementById('loading').classList.add('hidden');
+                }, 500);
+            }
+
+            isValidColor(color) {
+                const option = new Option().style;
+                option.color = color;
+                return option.color !== '';
+            }
+
+            hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                if (result) {
+                    const r = parseInt(result[1], 16);
+                    const g = parseInt(result[2], 16);
+                    const b = parseInt(result[3], 16);
+                    return `rgb(${r}, ${g}, ${b})`;
+                }
+                return hex;
+            }
+
+            hexToHsl(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                if (!result) return { h: 0, s: 0, l: 0 };
+
+                let r = parseInt(result[1], 16) / 255;
+                let g = parseInt(result[2], 16) / 255;
+                let b = parseInt(result[3], 16) / 255;
+
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+
+                if (max === min) {
+                    h = s = 0;
+                } else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+
+                return {
+                    h: Math.round(h * 360),
+                    s: Math.round(s * 100),
+                    l: Math.round(l * 100)
+                };
+            }
+
+            hexToHsv(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                if (!result) return { h: 0, s: 0, v: 0 };
+
+                let r = parseInt(result[1], 16) / 255;
+                let g = parseInt(result[2], 16) / 255;
+                let b = parseInt(result[3], 16) / 255;
+
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                let h, s, v = max;
+
+                const d = max - min;
+                s = max === 0 ? 0 : d / max;
+
+                if (max === min) {
+                    h = 0;
+                } else {
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+
+                return {
+                    h: Math.round(h * 360),
+                    s: Math.round(s * 100),
+                    v: Math.round(v * 100)
+                };
+            }
+
+            hslToHex(h, s, l) {
+                h = h / 360;
+                s = s / 100;
+                l = l / 100;
+
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+
+                let r, g, b;
+                if (s === 0) {
+                    r = g = b = l;
+                } else {
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+
+                const toHex = (c) => {
+                    const hex = Math.round(c * 255).toString(16);
+                    return hex.length === 1 ? '0' + hex : hex;
+                };
+
+                return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+            }
+        }
+
+        // Initialize app when DOM is loaded
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new ColorPickerApp();
+        });
+    </script>
+</body>
+</html>
