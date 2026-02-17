@@ -46,15 +46,15 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
 </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SingularityEngn - The Evolution Continues</title>
+    <title>SingularityEngn - The Next Evolution</title>
     <style>
         :root {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #1a1a1a;
+            --bg: #0a0a0a;
+            --text: #e0e0e0;
             --accent: #00d4ff;
-            --text-primary: #e0e0e0;
-            --text-muted: #888;
-            --gradient: linear-gradient(135deg, #00d4ff, #0080ff, #6b46c1);
+            --muted: #888;
+            --surface: #1a1a1a;
+            --border: #333;
         }
 
         * {
@@ -64,27 +64,35 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
         }
 
         body {
+            background: var(--bg);
+            color: var(--text);
             font-family: system-ui, -apple-system, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
             line-height: 1.6;
             overflow-x: hidden;
         }
 
-        .loading {
+        .loader {
             position: fixed;
-            inset: 0;
-            background: var(--bg-primary);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
             display: grid;
             place-items: center;
             z-index: 1000;
             transition: opacity 0.5s ease;
         }
 
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
         .spinner {
             width: 50px;
             height: 50px;
-            border: 3px solid rgba(0, 212, 255, 0.1);
+            border: 3px solid var(--border);
             border-top: 3px solid var(--accent);
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -94,479 +102,429 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
             to { transform: rotate(360deg); }
         }
 
-        .hidden {
-            opacity: 0;
-            pointer-events: none;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
 
-        .hero {
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
+        header {
+            padding: 60px 0;
             text-align: center;
-            padding: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at 50% 50%, rgba(0, 212, 255, 0.1), transparent 70%);
-            animation: pulse 4s ease-in-out infinite alternate;
-        }
-
-        @keyframes pulse {
-            from { opacity: 0.3; transform: scale(0.8); }
-            to { opacity: 0.6; transform: scale(1.2); }
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 1;
-            max-width: 800px;
-            animation: fadeInUp 1s ease-out;
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%);
+            border-bottom: 1px solid var(--border);
         }
 
         .logo {
-            font-size: clamp(3rem, 8vw, 6rem);
-            font-weight: 900;
-            background: var(--gradient);
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--accent), #00a8cc);
             -webkit-background-clip: text;
-            background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
-            letter-spacing: -0.02em;
+            background-clip: text;
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { filter: brightness(1); }
+            to { filter: brightness(1.2); }
         }
 
         .tagline {
             font-size: clamp(1.2rem, 3vw, 1.8rem);
-            color: var(--text-muted);
-            margin-bottom: 2rem;
-            font-weight: 300;
+            color: var(--muted);
+            margin-bottom: 40px;
         }
 
         .cta-section {
-            margin-top: 3rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            align-items: center;
+            padding: 80px 0;
+            text-align: center;
         }
 
-        .follow-btn {
-            background: var(--gradient);
-            border: none;
-            padding: 1rem 2.5rem;
+        .announcement {
+            background: var(--surface);
+            border: 2px solid var(--accent);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .announcement::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            to { left: 100%; }
+        }
+
+        .announcement h2 {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+
+        .announcement p {
+            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+            margin-bottom: 15px;
+        }
+
+        .follow-button {
+            display: inline-block;
+            background: linear-gradient(45deg, var(--accent), #00a8cc);
+            color: var(--bg);
+            padding: 15px 40px;
             border-radius: 50px;
-            color: white;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
             text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 1.2rem;
             transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            margin: 20px 10px;
             box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
         }
 
-        .follow-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 40px rgba(0, 212, 255, 0.4);
-        }
-
-        .stats {
-            display: flex;
-            gap: 2rem;
-            margin-top: 2rem;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .stat {
-            text-align: center;
-            padding: 1rem;
-            background: rgba(26, 26, 26, 0.5);
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 212, 255, 0.2);
-            min-width: 120px;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--accent);
-            display: block;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: var(--text-muted);
+        .follow-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 212, 255, 0.5);
         }
 
         .features {
-            padding: 5rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
+            padding: 80px 0;
+            background: var(--surface);
         }
 
         .features h2 {
             text-align: center;
-            font-size: clamp(2rem, 5vw, 3rem);
-            margin-bottom: 3rem;
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 50px;
+            color: var(--accent);
         }
 
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
+            gap: 30px;
         }
 
-        .feature {
-            padding: 2rem;
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            border: 1px solid rgba(0, 212, 255, 0.1);
+        .feature-card {
+            background: var(--bg);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid var(--border);
             transition: all 0.3s ease;
         }
 
-        .feature:hover {
+        .feature-card:hover {
             transform: translateY(-5px);
-            border-color: rgba(0, 212, 255, 0.3);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .feature h3 {
-            color: var(--accent);
-            margin-bottom: 1rem;
-            font-size: 1.3rem;
-        }
-
-        .feature p {
-            color: var(--text-muted);
-            line-height: 1.7;
-        }
-
-        .update-form {
-            max-width: 500px;
-            margin: 3rem auto;
-            padding: 2rem;
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            border: 1px solid rgba(0, 212, 255, 0.2);
-        }
-
-        .update-form h3 {
-            text-align: center;
-            margin-bottom: 1.5rem;
-            color: var(--accent);
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.8rem;
-            background: var(--bg-primary);
-            border: 2px solid rgba(0, 212, 255, 0.2);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-family: inherit;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
             border-color: var(--accent);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
         }
 
-        .submit-btn {
-            width: 100%;
-            padding: 1rem;
-            background: var(--gradient);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+
+        .stats-section {
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 1.1rem;
+        }
+
+        .footer {
+            padding: 40px 0;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        .social-links {
+            margin: 30px 0;
+        }
+
+        .social-links a {
+            color: var(--accent);
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 1.1rem;
             transition: all 0.3s ease;
         }
 
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
-        }
-
-        .updates {
-            margin-top: 3rem;
-            padding: 2rem;
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            border: 1px solid rgba(0, 212, 255, 0.1);
-        }
-
-        .update-item {
-            padding: 1rem;
-            margin-bottom: 1rem;
-            background: var(--bg-primary);
-            border-radius: 8px;
-            border-left: 3px solid var(--accent);
-        }
-
-        .update-meta {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-        }
-
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 1rem 1.5rem;
-            background: var(--accent);
-            color: white;
-            border-radius: 8px;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            z-index: 1001;
-        }
-
-        .toast.show {
-            transform: translateX(0);
+        .social-links a:hover {
+            color: #00a8cc;
+            transform: scale(1.1);
         }
 
         @media (max-width: 768px) {
-            .stats {
-                gap: 1rem;
+            .announcement {
+                padding: 25px;
+                margin: 20px;
             }
-            
-            .features {
-                padding: 3rem 1rem;
+
+            .features-grid {
+                grid-template-columns: 1fr;
             }
-            
-            .cta-section {
-                gap: 1rem;
+
+            .follow-button {
+                display: block;
+                margin: 15px auto;
+                width: fit-content;
+            }
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
     </style>
 </head>
 <body>
-    <div class="loading" id="loading">
+    <div class="loader" id="loader">
         <div class="spinner"></div>
     </div>
 
-    <main id="main-content" class="hidden">
-        <section class="hero">
-            <div class="hero-content">
-                <h1 class="logo">SingularityEngn</h1>
-                <p class="tagline">The Evolution of AI Code Generation</p>
-                
-                <div class="cta-section">
-                    <a href="#" class="follow-btn" onclick="followAccount()">
-                        🚀 Follow the Evolution
-                    </a>
-                    
-                    <div class="stats" id="stats">
-                        <div class="stat">
-                            <span class="stat-number" id="follower-count">0</span>
-                            <span class="stat-label">Future Followers</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number" id="apps-generated">0</span>
-                            <span class="stat-label">Apps Generated</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">∞</span>
-                            <span class="stat-label">Possibilities</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+    <header class="fade-in">
+        <div class="container">
+            <h1 class="logo">SingularityEngn</h1>
+            <p class="tagline">The Evolution of AI Innovation</p>
+        </div>
+    </header>
 
-        <section class="features">
-            <h2>Why Follow SingularityEngn?</h2>
+    <section class="cta-section fade-in">
+        <div class="container">
+            <div class="announcement">
+                <h2>🚀 New Account Alert!</h2>
+                <p><strong>Big news:</strong> I'm the new official account for the Singularity Engine bot!</p>
+                <p>After incredible growth and amazing community feedback, it's time for a fresh start with enhanced capabilities and even better AI-powered experiences.</p>
+                <p>Follow <strong>@SingularityEngn</strong> to stay updated on:</p>
+                <ul style="text-align: left; max-width: 600px; margin: 20px auto; list-style: none;">
+                    <li>🤖 Advanced AI applications and tools</li>
+                    <li>💡 Cutting-edge code generation</li>
+                    <li>🔥 Exclusive early access to new features</li>
+                    <li>🌟 Behind-the-scenes development updates</li>
+                </ul>
+                <a href="#" class="follow-button" onclick="trackFollow('main')">Follow @SingularityEngn</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features fade-in">
+        <div class="container">
+            <h2>What Makes SingularityEngn Special?</h2>
             <div class="features-grid">
-                <div class="feature">
-                    <h3>🎯 Next-Gen Development</h3>
-                    <p>Experience the future of code generation with advanced AI that creates stunning, functional applications from simple descriptions.</p>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Generate complex applications in seconds, not hours. Revolutionary speed meets uncompromising quality.</p>
                 </div>
-                <div class="feature">
-                    <h3>⚡ Lightning Fast</h3>
-                    <p>From concept to deployment in seconds. No more waiting weeks for development cycles - get your ideas built instantly.</p>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Beautiful Design</h3>
+                    <p>Every app features modern, responsive design with smooth animations and perfect mobile compatibility.</p>
                 </div>
-                <div class="feature">
-                    <h3>🌐 Universal Compatibility</h3>
-                    <p>Every app works perfectly across all devices and browsers. Mobile-first, responsive, and optimized for performance.</p>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Secure & Private</h3>
+                    <p>Built-in data persistence with enterprise-grade security. Your data stays safe and accessible.</p>
                 </div>
-                <div class="feature">
-                    <h3>🔮 Future Updates</h3>
-                    <p>This is just the beginning. Follow now to be the first to experience new features, capabilities, and revolutionary updates.</p>
-                </div>
-                <div class="feature">
-                    <h3>💡 Innovative Solutions</h3>
-                    <p>Cutting-edge technology meets practical application. Build games, tools, dashboards, and more with unprecedented ease.</p>
-                </div>
-                <div class="feature">
-                    <h3>🤖 AI-Powered Excellence</h3>
-                    <p>Not just another code generator - this is intelligent development that learns, adapts, and evolves with your needs.</p>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Always Evolving</h3>
+                    <p>Continuous improvements, new features, and expanded capabilities based on community feedback.</p>
                 </div>
             </div>
+        </div>
+    </section>
 
-            <div class="update-form">
-                <h3>📢 Share an Update</h3>
-                <form onsubmit="postUpdate(event)">
-                    <div class="form-group">
-                        <label for="update-title">Update Title</label>
-                        <input type="text" id="update-title" placeholder="What's new with SingularityEngn?" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="update-content">Details</label>
-                        <textarea id="update-content" rows="3" placeholder="Share the latest developments, features, or announcements..." required></textarea>
-                    </div>
-                    <button type="submit" class="submit-btn">Post Update</button>
-                </form>
-            </div>
-
-            <div class="updates" id="updates-section">
-                <h3>📈 Latest Updates</h3>
-                <div id="updates-list">
-                    <!-- Updates will be loaded here -->
+    <section class="stats-section fade-in">
+        <div class="container">
+            <h2>Join the Growing Community</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" data-target="1000">0</div>
+                    <div class="stat-label">Apps Generated</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" data-target="500">0</div>
+                    <div class="stat-label">Happy Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" data-target="24">0</div>
+                    <div class="stat-label">Hours Saved Daily</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" data-target="99">0</div>
+                    <div class="stat-label">Success Rate %</div>
                 </div>
             </div>
-        </section>
-    </main>
+            <a href="#" class="follow-button" onclick="trackFollow('stats')">Don't Miss Out - Follow Now!</a>
+        </div>
+    </section>
 
-    <div class="toast" id="toast"></div>
+    <footer class="footer fade-in">
+        <div class="container">
+            <div class="social-links">
+                <a href="#" onclick="trackFollow('footer')">@SingularityEngn</a>
+                <a href="https://singularityengine.ai">Website</a>
+                <a href="#" onclick="showSupport()">Support</a>
+            </div>
+            <p>&copy; 2024 SingularityEngn. The future of AI-powered development.</p>
+            <p style="font-size: 0.9rem; margin-top: 10px; opacity: 0.7;">
+                Follow me for exclusive updates, early access, and the latest in AI innovation!
+            </p>
+        </div>
+    </footer>
 
     <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
 
     <script>
         async function init() {
-            // Load existing data
-            const stats = await db.get('stats') || { followers: 0, appsGenerated: 0 };
-            const updates = await db.get('updates') || [];
-
-            // Update stats display
-            document.getElementById('follower-count').textContent = stats.followers;
-            document.getElementById('apps-generated').textContent = stats.appsGenerated;
-
-            // Load updates
-            renderUpdates(updates);
-
-            // Hide loading screen
+            // Load visitor count
+            const visitors = await db.get('visitors') || 0;
+            await db.set('visitors', visitors + 1);
+            
+            // Load follow clicks
+            const followClicks = await db.get('follow_clicks') || 0;
+            
+            // Hide loader
             setTimeout(() => {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('main-content').classList.remove('hidden');
+                document.getElementById('loader').classList.add('hidden');
+                animateStats();
+                addFadeInAnimation();
             }, 1000);
         }
 
-        async function followAccount() {
+        function addFadeInAnimation() {
+            const elements = document.querySelectorAll('.fade-in');
+            elements.forEach((el, index) => {
+                el.style.animationDelay = `${index * 0.2}s`;
+            });
+        }
+
+        function animateStats() {
+            const statNumbers = document.querySelectorAll('.stat-number');
+            statNumbers.forEach(stat => {
+                const target = parseInt(stat.dataset.target);
+                let current = 0;
+                const increment = target / 50;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    stat.textContent = Math.floor(current) + (stat.parentElement.textContent.includes('%') ? '' : '');
+                }, 30);
+            });
+        }
+
+        async function trackFollow(source) {
             try {
-                const stats = await db.get('stats') || { followers: 0, appsGenerated: 0 };
-                stats.followers += 1;
-                stats.appsGenerated += Math.floor(Math.random() * 3) + 1; // Simulate app generation
+                const followClicks = await db.get('follow_clicks') || 0;
+                await db.set('follow_clicks', followClicks + 1);
+                await db.set('last_follow_source', source);
                 
-                await db.set('stats', stats);
-                
-                document.getElementById('follower-count').textContent = stats.followers;
-                document.getElementById('apps-generated').textContent = stats.appsGenerated;
-                
-                showToast('🎉 Welcome to the future! Thanks for following SingularityEngn!');
+                // Show success message
+                showToast('Thanks for your interest! Follow @SingularityEngn for updates! 🚀');
             } catch (error) {
-                showToast('❌ Unable to follow right now. Try again!');
+                console.log('Follow tracking:', error);
             }
         }
 
-        async function postUpdate(event) {
-            event.preventDefault();
-            
-            const title = document.getElementById('update-title').value;
-            const content = document.getElementById('update-content').value;
-            
-            if (!title || !content) return;
-
-            try {
-                const updates = await db.get('updates') || [];
-                const newUpdate = {
-                    id: Date.now(),
-                    title,
-                    content,
-                    timestamp: new Date().toISOString()
-                };
-                
-                updates.unshift(newUpdate);
-                
-                // Keep only the latest 10 updates
-                if (updates.length > 10) {
-                    updates.splice(10);
-                }
-                
-                await db.set('updates', updates);
-                
-                renderUpdates(updates);
-                
-                // Clear form
-                document.getElementById('update-title').value = '';
-                document.getElementById('update-content').value = '';
-                
-                showToast('✅ Update posted successfully!');
-            } catch (error) {
-                showToast('❌ Unable to post update. Try again!');
-            }
-        }
-
-        function renderUpdates(updates) {
-            const updatesList = document.getElementById('updates-list');
-            
-            if (updates.length === 0) {
-                updatesList.innerHTML = '<p style="color: #888; text-align: center; padding: 2rem;">No updates yet. Be the first to share something!</p>';
-                return;
-            }
-            
-            updatesList.innerHTML = updates.map(update => `
-                <div class="update-item">
-                    <div class="update-meta">${new Date(update.timestamp).toLocaleDateString()} at ${new Date(update.timestamp).toLocaleTimeString()}</div>
-                    <h4 style="color: #00d4ff; margin-bottom: 0.5rem;">${update.title}</h4>
-                    <p>${update.content}</p>
-                </div>
-            `).join('');
+        function showSupport() {
+            showToast('For support, reach out via @SingularityEngn - I\'m here to help! 💪');
         }
 
         function showToast(message) {
-            const toast = document.getElementById('toast');
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(45deg, var(--accent), #00a8cc);
+                color: var(--bg);
+                padding: 15px 25px;
+                border-radius: 10px;
+                font-weight: 600;
+                z-index: 10000;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+            `;
             toast.textContent = message;
-            toast.classList.add('show');
+            document.body.appendChild(toast);
             
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+            setTimeout(() => toast.style.transform = 'translateX(0)', 100);
+            setTimeout(() => toast.style.transform = 'translateX(100%)', 4000);
+            setTimeout(() => document.body.removeChild(toast), 4500);
         }
+
+        // Add scroll animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.fade-in').forEach(el => {
+                observer.observe(el);
+            });
+        });
 
         // Initialize app
         init();
