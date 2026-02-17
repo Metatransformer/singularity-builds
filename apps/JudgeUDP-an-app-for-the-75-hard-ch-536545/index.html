@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "JudgeUDP-an-app-for-the-75-hard-ch-536545";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>75 Hard Challenge Tracker</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: #1a1a1a;
+            --accent: #00d4ff;
+            --text: #e0e0e0;
+            --text-muted: #999;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --danger: #ff4444;
+            --radius: 12px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-dark);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 212, 255, 0.3);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), #ffffff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .progress-ring {
+            width: 120px;
+            height: 120px;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .progress-circle {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .progress-circle circle {
+            fill: none;
+            stroke-width: 8;
+            r: 50;
+            cx: 60;
+            cy: 60;
+        }
+
+        .progress-bg {
+            stroke: rgba(0, 212, 255, 0.2);
+        }
+
+        .progress-bar {
+            stroke: var(--accent);
+            stroke-linecap: round;
+            stroke-dasharray: 314;
+            stroke-dashoffset: 314;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .progress-text {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+
+        .tab {
+            background: var(--bg-card);
+            border: 2px solid transparent;
+            padding: 12px 24px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .tab:hover {
+            border-color: var(--accent);
+        }
+
+        .tab.active {
+            background: var(--accent);
+            color: var(--bg-dark);
+            border-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .daily-tracker {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        .daily-tasks {
+            display: grid;
+            gap: 20px;
+        }
+
+        .task {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: rgba(0, 212, 255, 0.05);
+            border-radius: var(--radius);
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .task:hover {
+            border-color: var(--accent);
+        }
+
+        .task.completed {
+            border-color: var(--success);
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .task-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--accent);
+            border-radius: 6px;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .task-checkbox:hover {
+            background: rgba(0, 212, 255, 0.2);
+        }
+
+        .task-checkbox.checked {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .task-checkbox.checked::after {
+            content: '✓';
+            color: var(--bg-dark);
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .task-content h3 {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .task-content p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .section {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .foods-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .food-category {
+            background: rgba(0, 212, 255, 0.05);
+            padding: 20px;
+            border-radius: var(--radius);
+            border-left: 4px solid var(--accent);
+        }
+
+        .food-category h3 {
+            color: var(--accent);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .food-list {
+            list-style: none;
+        }
+
+        .food-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .food-list li:last-child {
+            border-bottom: none;
+        }
+
+        .exercise-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .exercise-card {
+            background: rgba(0, 212, 255, 0.05);
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .exercise-card:hover {
+            border-color: var(--accent);
+        }
+
+        .exercise-card h3 {
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .exercise-details {
+            margin-bottom: 15px;
+            color: var(--text-muted);
+        }
+
+        .exercise-benefits {
+            list-style: none;
+        }
+
+        .exercise-benefits li::before {
+            content: '→';
+            color: var(--accent);
+            margin-right: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: rgba(0, 212, 255, 0.05);
+            padding: 20px;
+            border-radius: var(--radius);
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .reset-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            margin-top: 20px;
+        }
+
+        .reset-btn:hover {
+            background: #cc3333;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .tabs {
+                justify-content: center;
+            }
+            
+            .daily-tracker,
+            .section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>75 HARD CHALLENGE</h1>
+            <div class="progress-ring">
+                <svg class="progress-circle">
+                    <circle class="progress-bg"></circle>
+                    <circle class="progress-bar" id="progressBar"></circle>
+                </svg>
+                <div class="progress-text" id="progressText">0/75</div>
+            </div>
+            <p style="color: var(--text-muted);">Transform your life in 75 days</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('daily')">Daily Tasks</div>
+            <div class="tab" onclick="switchTab('nutrition')">Nutrition Guide</div>
+            <div class="tab" onclick="switchTab('exercise')">Exercise Plans</div>
+            <div class="tab" onclick="switchTab('progress')">Progress</div>
+        </div>
+
+        <div class="tab-content active" id="daily">
+            <div class="daily-tracker">
+                <h2 style="color: var(--accent); margin-bottom: 25px;">Day <span id="currentDay">1</span> Tasks</h2>
+                <div class="daily-tasks">
+                    <div class="task" data-task="water">
+                        <div class="task-checkbox" onclick="toggleTask('water')"></div>
+                        <div class="task-content">
+                            <h3>Drink 1 gallon of water</h3>
+                            <p>Stay hydrated throughout the day - about 16 cups</p>
+                        </div>
+                    </div>
+                    <div class="task" data-task="workout1">
+                        <div class="task-checkbox" onclick="toggleTask('workout1')"></div>
+                        <div class="task-content">
+                            <h3>Complete Workout #1 (45 min)</h3>
+                            <p>Strength training or high-intensity cardio</p>
+                        </div>
+                    </div>
+                    <div class="task" data-task="workout2">
+                        <div class="task-checkbox" onclick="toggleTask('workout2')"></div>
+                        <div class="task-content">
+                            <h3>Complete Workout #2 (45 min)</h3>
+                            <p>Outdoor walk, run, or different exercise</p>
+                        </div>
+                    </div>
+                    <div class="task" data-task="diet">
+                        <div class="task-checkbox" onclick="toggleTask('diet')"></div>
+                        <div class="task-content">
+                            <h3>Follow strict diet</h3>
+                            <p>No cheat meals, alcohol, or processed foods</p>
+                        </div>
+                    </div>
+                    <div class="task" data-task="reading">
+                        <div class="task-checkbox" onclick="toggleTask('reading')"></div>
+                        <div class="task-content">
+                            <h3>Read 10 pages</h3>
+                            <p>Non-fiction, personal development book</p>
+                        </div>
+                    </div>
+                    <div class="task" data-task="photo">
+                        <div class="task-checkbox" onclick="toggleTask('photo')"></div>
+                        <div class="task-content">
+                            <h3>Take progress photo</h3>
+                            <p>Document your transformation journey</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="reset-btn" onclick="resetDay()">Reset Day</button>
+            </div>
+        </div>
+
+        <div class="tab-content" id="nutrition">
+            <div class="section">
+                <h2>Nutrition Guidelines</h2>
+                <div class="foods-grid">
+                    <div class="food-category">
+                        <h3>Lean Proteins</h3>
+                        <ul class="food-list">
+                            <li>Chicken breast (skinless)</li>
+                            <li>Turkey breast</li>
+                            <li>Lean beef (90% lean)</li>
+                            <li>Fish (salmon, tuna, cod)</li>
+                            <li>Eggs and egg whites</li>
+                            <li>Greek yogurt (plain)</li>
+                            <li>Tofu and tempeh</li>
+                        </ul>
+                    </div>
+                    <div class="food-category">
+                        <h3>Complex Carbs</h3>
+                        <ul class="food-list">
+                            <li>Brown rice</li>
+                            <li>Quinoa</li>
+                            <li>Sweet potatoes</li>
+                            <li>Oatmeal (steel cut)</li>
+                            <li>Whole grain bread</li>
+                            <li>Beans and legumes</li>
+                            <li>Barley and bulgur</li>
+                        </ul>
+                    </div>
+                    <div class="food-category">
+                        <h3>Healthy Fats</h3>
+                        <ul class="food-list">
+                            <li>Avocados</li>
+                            <li>Nuts and seeds</li>
+                            <li>Olive oil (extra virgin)</li>
+                            <li>Coconut oil</li>
+                            <li>Fatty fish</li>
+                            <li>Nut butters (natural)</li>
+                            <li>Flaxseeds and chia</li>
+                        </ul>
+                    </div>
+                    <div class="food-category">
+                        <h3>Vegetables</h3>
+                        <ul class="food-list">
+                            <li>Leafy greens (spinach, kale)</li>
+                            <li>Broccoli and cauliflower</li>
+                            <li>Bell peppers</li>
+                            <li>Carrots and celery</li>
+                            <li>Tomatoes and cucumbers</li>
+                            <li>Asparagus and Brussels sprouts</li>
+                            <li>Zucchini and squash</li>
+                        </ul>
+                    </div>
+                    <div class="food-category">
+                        <h3>Fruits</h3>
+                        <ul class="food-list">
+                            <li>Berries (blueberries, strawberries)</li>
+                            <li>Apples and pears</li>
+                            <li>Citrus fruits</li>
+                            <li>Bananas (in moderation)</li>
+                            <li>Melons</li>
+                            <li>Grapes</li>
+                            <li>Stone fruits (peaches, plums)</li>
+                        </ul>
+                    </div>
+                    <div class="food-category">
+                        <h3>AVOID</h3>
+                        <ul class="food-list">
+                            <li>Alcohol (strictly forbidden)</li>
+                            <li>Processed foods</li>
+                            <li>Sugar and artificial sweeteners</li>
+                            <li>Fried foods</li>
+                            <li>Fast food</li>
+                            <li>Sodas and juices</li>
+                            <li>Candy and desserts</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="exercise">
+            <div class="section">
+                <h2>Exercise Plans</h2>
+                <div class="exercise-grid">
+                    <div class="exercise-card">
+                        <h3>Strength Training (Indoor)</h3>
+                        <div class="exercise-details">45 minutes • 3-4x per week</div>
+                        <ul class="exercise-benefits">
+                            <li>Compound movements (squats, deadlifts)</li>
+                            <li>Push-ups and pull-ups</li>
+                            <li>Dumbbell exercises</li>
+                            <li>Core strengthening</li>
+                            <li>Progressive overload</li>
+                        </ul>
+                    </div>
+                    <div class="exercise-card">
+                        <h3>Cardio Training</h3>
+                        <div class="exercise-details">45 minutes • Daily</div>
+                        <ul class="exercise-benefits">
+                            <li>Running or jogging</li>
+                            <li>Cycling</li>
+                            <li>Swimming</li>
+                            <li>HIIT workouts</li>
+                            <li>Stair climbing</li>
+                        </ul>
+                    </div>
+                    <div class="exercise-card">
+                        <h3>Outdoor Activities</h3>
+                        <div class="exercise-details">45 minutes • Must be outdoors</div>
+                        <ul class="exercise-benefits">
+                            <li>Walking or hiking</li>
+                            <li>Outdoor running</li>
+                            <li>Biking trails</li>
+                            <li>Rock climbing</li>
+                            <li>Outdoor sports</li>
+                        </ul>
+                    </div>
+                    <div class="exercise-card">
+                        <h3>Flexibility & Recovery</h3>
+                        <div class="exercise-details">20-30 minutes • As needed</div>
+                        <ul class="exercise-benefits">
+                            <li>Dynamic stretching</li>
+                            <li>Yoga flows</li>
+                            <li>Foam rolling</li>
+                            <li>Mobility work</li>
+                            <li>Recovery walks</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="progress">
+            <div class="section">
+                <h2>Your Progress</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="completedDays">0</div>
+                        <div class="stat-label">Days Completed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="currentStreak">0</div>
+                        <div class="stat-label">Current Streak</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalTasks">0</div>
+                        <div class="stat-label">Total Tasks Done</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="successRate">0%</div>
+                        <div class="stat-label">Success Rate</div>
+                    </div>
+                </div>
+                <button class="reset-btn" onclick="resetChallenge()">Reset Entire Challenge</button>
+            </div>
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let challengeData = {
+            currentDay: 1,
+            completedDays: 0,
+            totalTasks: 0,
+            dailyTasks: {},
+            streak: 0
+        };
+
+        async function init() {
+            try {
+                const savedData = await db.get("challengeData");
+                if (savedData) {
+                    challengeData = savedData;
+                }
+                updateUI();
+                hideLoader();
+            } catch (error) {
+                console.error("Failed to load data:", error);
+                hideLoader();
+            }
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').classList.add('hidden');
+        }
+
+        async function saveData() {
+            try {
+                await db.set("challengeData", challengeData);
+            } catch (error) {
+                console.error("Failed to save data:", error);
+            }
+        }
+
+        function updateUI() {
+            // Update current day
+            document.getElementById('currentDay').textContent = challengeData.currentDay;
+            
+            // Update progress ring
+            const progress = (challengeData.completedDays / 75) * 314;
+            document.getElementById('progressBar').style.strokeDashoffset = 314 - progress;
+            document.getElementById('progressText').textContent = `${challengeData.completedDays}/75`;
+            
+            // Update daily tasks
+            const todayKey = `day_${challengeData.currentDay}`;
+            const todayTasks = challengeData.dailyTasks[todayKey] || {};
+            
+            const tasks = document.querySelectorAll('.task');
+            tasks.forEach(task => {
+                const taskType = task.dataset.task;
+                const checkbox = task.querySelector('.task-checkbox');
+                const isCompleted = todayTasks[taskType] || false;
+                
+                if (isCompleted) {
+                    checkbox.classList.add('checked');
+                    task.classList.add('completed');
+                } else {
+                    checkbox.classList.remove('checked');
+                    task.classList.remove('completed');
+                }
+            });
+            
+            // Update stats
+            document.getElementById('completedDays').textContent = challengeData.completedDays;
+            document.getElementById('currentStreak').textContent = challengeData.streak;
+            document.getElementById('totalTasks').textContent = challengeData.totalTasks;
+            
+            const successRate = challengeData.currentDay > 1 ? 
+                Math.round((challengeData.completedDays / (challengeData.currentDay - 1)) * 100) : 0;
+            document.getElementById('successRate').textContent = `${successRate}%`;
+        }
+
+        async function toggleTask(taskType) {
+            const todayKey = `day_${challengeData.currentDay}`;
+            
+            if (!challengeData.dailyTasks[todayKey]) {
+                challengeData.dailyTasks[todayKey] = {};
+            }
+            
+            const currentState = challengeData.dailyTasks[todayKey][taskType] || false;
+            challengeData.dailyTasks[todayKey][taskType] = !currentState;
+            
+            if (!currentState) {
+                challengeData.totalTasks++;
+            } else {
+                challengeData.totalTasks--;
+            }
+            
+            // Check if all tasks for today are completed
+            const todayTasks = challengeData.dailyTasks[todayKey];
+            const taskTypes = ['water', 'workout1', 'workout2', 'diet', 'reading', 'photo'];
+            const allCompleted = taskTypes.every(type => todayTasks[type]);
+            
+            if (allCompleted && challengeData.currentDay <= 75) {
+                // Day completed - advance to next day
+                challengeData.completedDays++;
+                challengeData.streak++;
+                
+                if (challengeData.currentDay < 75) {
+                    challengeData.currentDay++;
+                }
+            } else if (!allCompleted) {
+                // Day no longer complete - check if we need to adjust counters
+                const wasComplete = taskTypes.every(type => 
+                    type === taskType ? !challengeData.dailyTasks[todayKey][type] : 
+                    challengeData.dailyTasks[todayKey][type]
+                );
+                
+                if (wasComplete) {
+                    challengeData.completedDays = Math.max(0, challengeData.completedDays - 1);
+                }
+            }
+            
+            updateUI();
+            await saveData();
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        async function resetDay() {
+            if (confirm('Reset all tasks for today?')) {
+                const todayKey = `day_${challengeData.currentDay}`;
+                const todayTasks = challengeData.dailyTasks[todayKey] || {};
+                
+                // Subtract completed tasks from total
+                Object.values(todayTasks).forEach(completed => {
+                    if (completed) challengeData.totalTasks--;
+                });
+                
+                challengeData.dailyTasks[todayKey] = {};
+                
+                updateUI();
+                await saveData();
+            }
+        }
+
+        async function resetChallenge() {
+            if (confirm('Reset the entire 75 Hard Challenge? This cannot be undone.')) {
+                challengeData = {
+                    currentDay: 1,
+                    completedDays: 0,
+                    totalTasks: 0,
+                    dailyTasks: {},
+                    streak: 0
+                };
+                
+                updateUI();
+                await saveData();
+                
+                // Switch back to daily tab
+                switchTab('daily');
+            }
+        }
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
