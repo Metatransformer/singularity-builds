@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "TheEdPill-ai-opportunity-scanner-ap-245552";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Opportunity Scanner</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #2a2a2a;
+            --accent: #00d4ff;
+            --accent-dim: #00a3cc;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-muted: #808080;
+            --border: #333;
+            --success: #00ff88;
+            --warning: #ff8800;
+            --error: #ff3366;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: clamp(1rem, 2vw, 1.2rem);
+        }
+
+        .input-section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .tags-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            min-height: 44px;
+            padding: 0.5rem;
+            align-items: center;
+        }
+
+        .tag {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .tag-remove {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+            padding: 0;
+            width: 16px;
+            height: 16px;
+            display: grid;
+            place-items: center;
+        }
+
+        .tag-input {
+            flex: 1;
+            min-width: 120px;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+        }
+
+        .results {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .opportunity-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .opportunity-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), #00ff88);
+        }
+
+        .opportunity-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+            border-color: var(--accent);
+        }
+
+        .opportunity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+
+        .opportunity-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .opportunity-category {
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .opportunity-description {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+
+        .steps-section, .tips-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .step-list, .tip-list {
+            list-style: none;
+        }
+
+        .step-item, .tip-item {
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            border-left: 3px solid var(--accent);
+            transition: all 0.2s ease;
+        }
+
+        .step-item:hover, .tip-item:hover {
+            background: #333;
+            transform: translateX(4px);
+        }
+
+        .step-number {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--bg-primary);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-right: 0.75rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .saved-plans {
+            margin-top: 3rem;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .saved-plans-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .saved-plan-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .saved-plan-item:hover {
+            border-color: var(--accent);
+            background: var(--bg-card);
+        }
+
+        .saved-plan-info h4 {
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+        }
+
+        .saved-plan-info p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .saved-plan-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--success);
+            color: var(--bg-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transform: translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1001;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .input-section {
+                padding: 1.5rem;
+            }
+
+            .opportunity-card {
+                padding: 1.5rem;
+            }
+
+            .opportunity-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .saved-plan-item {
+                flex-direction: column;
+                align-items: flex-start;
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1 class="logo">🤖 AI Opportunity Scanner</h1>
+            <p class="subtitle">Discover personalized AI business opportunities based on your skills and interests</p>
+        </header>
+
+        <div class="input-section">
+            <form id="scannerForm">
+                <div class="form-group">
+                    <label for="skills">Your Skills & Interests</label>
+                    <div class="tags-input" id="skillsContainer">
+                        <input type="text" class="tag-input" id="skillInput" placeholder="Type a skill and press Enter (e.g., sales, marketing, crypto)">
+                    </div>
+                    <div style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-muted);">
+                        Popular skills: sales, marketing, crypto, design, writing, coding, finance, consulting
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="experience">Experience Level</label>
+                    <select id="experience">
+                        <option value="beginner">Beginner (0-2 years)</option>
+                        <option value="intermediate">Intermediate (3-5 years)</option>
+                        <option value="advanced">Advanced (5+ years)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="budget">Available Budget</label>
+                    <select id="budget">
+                        <option value="minimal">Minimal ($0-$100/month)</option>
+                        <option value="moderate">Moderate ($100-$500/month)</option>
+                        <option value="substantial">Substantial ($500+ /month)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn" id="scanBtn">
+                    🔍 Scan for AI Opportunities
+                </button>
+            </form>
+        </div>
+
+        <div id="results" style="display: none;"></div>
+
+        <div class="saved-plans" id="savedPlans" style="display: none;">
+            <div class="saved-plans-header">
+                <h2>📋 Saved Action Plans</h2>
+                <button class="btn btn-secondary" id="clearAllBtn">Clear All</button>
+            </div>
+            <div id="savedPlansList"></div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let skills = [];
+        let opportunities = [];
+
+        // AI opportunity database
+        const opportunityDatabase = {
+            sales: [
+                {
+                    title: "AI-Powered Sales Prospecting Service",
+                    category: "Sales Automation",
+                    description: "Use AI to identify, research, and qualify leads automatically, then offer this as a service to other businesses.",
+                    steps: [
+                        "Research AI prospecting tools (Apollo, Clay, Instantly)",
+                        "Create sample workflows for different industries",
+                        "Build a portfolio of successful prospecting campaigns",
+                        "Package your service with clear pricing tiers",
+                        "Market to small-medium businesses lacking sales teams"
+                    ],
+                    tips: [
+                        "Start with one industry you understand well",
+                        "Offer a free trial or audit to prove value",
+                        "Focus on measurable results (leads generated, meetings booked)",
+                        "Create templates and playbooks to scale efficiently"
+                    ]
+                },
+                {
+                    title: "AI Sales Copywriting Agency",
+                    category: "Content Creation",
+                    description: "Leverage AI to create high-converting sales copy, emails, and landing pages for businesses at scale.",
+                    steps: [
+                        "Master AI writing tools and prompting techniques",
+                        "Develop templates for different sales scenarios",
+                        "Create a portfolio showcasing before/after results",
+                        "Build relationships with marketing agencies and consultants",
+                        "Offer specialized packages (email sequences, landing pages, ads)"
+                    ],
+                    tips: [
+                        "Always edit and personalize AI-generated content",
+                        "Track conversion rates to prove ROI",
+                        "Specialize in high-value niches (SaaS, e-commerce, coaching)",
+                        "Combine AI efficiency with human strategy and creativity"
+                    ]
+                }
+            ],
+            marketing: [
+                {
+                    title: "AI Content Marketing Automation",
+                    category: "Content Strategy",
+                    description: "Build systems that automatically research, create, and distribute content across multiple channels for businesses.",
+                    steps: [
+                        "Map out content creation workflows using AI tools",
+                        "Set up automated research and trend monitoring",
+                        "Create content calendars and distribution schedules",
+                        "Build quality control processes and brand guidelines",
+                        "Offer this as a managed service to businesses"
+                    ],
+                    tips: [
+                        "Focus on industries with consistent content needs",
+                        "Maintain human oversight for brand voice and quality",
+                        "Use data to optimize content performance continuously",
+                        "Create clear reporting dashboards for clients"
+                    ]
+                },
+                {
+                    title: "AI-Driven Social Media Management",
+                    category: "Social Media",
+                    description: "Use AI to create, schedule, and optimize social media content while providing strategic insights and engagement automation.",
+                    steps: [
+                        "Learn advanced AI tools for content creation and scheduling",
+                        "Develop brand voice guidelines and content pillars",
+                        "Set up automated engagement and response systems",
+                        "Create performance tracking and reporting systems",
+                        "Build a client roster starting with small businesses"
+                    ],
+                    tips: [
+                        "Maintain authenticity despite automation",
+                        "Focus on platforms where your target clients are active",
+                        "Use AI for ideation but add human creativity and strategy",
+                        "Offer package deals including strategy, creation, and management"
+                    ]
+                }
+            ],
+            crypto: [
+                {
+                    title: "AI Crypto Trading Signal Service",
+                    category: "Trading & Analytics",
+                    description: "Develop AI models to analyze crypto markets and provide trading signals, insights, or automated trading strategies.",
+                    steps: [
+                        "Study AI/ML techniques for financial market analysis",
+                        "Build and backtest trading algorithms on historical data",
+                        "Create a subscription-based signal service platform",
+                        "Develop risk management and position sizing strategies",
+                        "Market to crypto trading communities and platforms"
+                    ],
+                    tips: [
+                        "Always disclose risks and past performance clearly",
+                        "Start with paper trading to prove your models",
+                        "Focus on risk-adjusted returns, not just profits",
+                        "Comply with all relevant financial regulations"
+                    ]
+                },
+                {
+                    title: "Blockchain AI Consulting",
+                    category: "Consulting",
+                    description: "Help traditional businesses integrate AI solutions with blockchain technology for transparency, automation, and new business models.",
+                    steps: [
+                        "Deepen knowledge in both AI and blockchain technologies",
+                        "Identify use cases where AI + blockchain creates value",
+                        "Build proof-of-concept projects and case studies",
+                        "Network with blockchain companies and traditional enterprises",
+                        "Offer workshops and consulting services on integration strategies"
+                    ],
+                    tips: [
+                        "Focus on practical applications, not just theoretical benefits",
+                        "Stay updated on regulatory developments in both spaces",
+                        "Build partnerships with blockchain development teams",
+                        "Target industries like supply chain, finance, and healthcare"
+                    ]
+                }
+            ],
+            design: [
+                {
+                    title: "AI-Enhanced Design Studio",
+                    category: "Creative Services",
+                    description: "Combine AI tools with your design expertise to offer rapid, high-quality design services across multiple disciplines.",
+                    steps: [
+                        "Master AI design tools (Midjourney, DALL-E, Figma plugins)",
+                        "Develop workflows that blend AI generation with human refinement",
+                        "Create service packages for logos, websites, marketing materials",
+                        "Build a portfolio showcasing AI-enhanced vs traditional work",
+                        "Market the speed and cost advantages to small businesses"
+                    ],
+                    tips: [
+                        "Always add human creativity and strategic thinking to AI outputs",
+                        "Be transparent about your AI-enhanced process",
+                        "Focus on faster turnaround times as a key differentiator",
+                        "Develop expertise in prompt engineering for better AI results"
+                    ]
+                },
+                {
+                    title: "AI UX Research and Optimization",
+                    category: "User Experience",
+                    description: "Use AI to analyze user behavior, generate insights, and optimize digital experiences for better conversions and engagement.",
+                    steps: [
+                        "Learn AI tools for user behavior analysis and A/B testing",
+                        "Develop frameworks for AI-driven UX audits",
+                        "Create automated testing and optimization workflows",
+                        "Build case studies showing measurable UX improvements",
+                        "Offer services to e-commerce sites and SaaS companies"
+                    ],
+                    tips: [
+                        "Combine quantitative AI insights with qualitative user research",
+                        "Focus on metrics that matter to business outcomes",
+                        "Use AI to identify patterns humans might miss",
+                        "Always validate AI recommendations with real user testing"
+                    ]
+                }
+            ],
+            writing: [
+                {
+                    title: "AI Content Creation Agency",
+                    category: "Content Production",
+                    description: "Scale content creation using AI while maintaining quality and brand voice through human oversight and editing.",
+                    steps: [
+                        "Master various AI writing tools and their strengths",
+                        "Develop efficient editing and quality assurance processes",
+                        "Create content templates and brand voice guidelines",
+                        "Build a team of editors and subject matter experts",
+                        "Market to content-hungry businesses and agencies"
+                    ],
+                    tips: [
+                        "Always position as AI-assisted, not AI-generated content",
+                        "Specialize in specific content types or industries",
+                        "Maintain high editorial standards to build reputation",
+                        "Use AI for research and first drafts, humans for strategy and polish"
+                    ]
+                },
+                {
+                    title: "AI-Powered Technical Documentation",
+                    category: "Technical Writing",
+                    description: "Use AI to automatically generate and maintain technical documentation, API docs, and user guides from code and specifications.",
+                    steps: [
+                        "Learn tools that can parse code and generate documentation",
+                        "Develop templates and standards for different document types",
+                        "Create automated workflows for documentation updates",
+                        "Build expertise in technical communication best practices",
+                        "Target software companies and technical organizations"
+                    ],
+                    tips: [
+                        "Focus on keeping documentation current and accurate",
+                        "Combine AI generation with human review and testing",
+                        "Understand the technical domains you're documenting",
+                        "Offer maintenance and update services, not just creation"
+                    ]
+                }
+            ],
+            coding: [
+                {
+                    title: "AI Code Generation Service",
+                    category: "Software Development",
+                    description: "Offer rapid prototyping and development services using AI coding assistants to build applications faster and more efficiently.",
+                    steps: [
+                        "Master AI coding tools (GitHub Copilot, ChatGPT, Claude)",
+                        "Develop workflows for AI-assisted development",
+                        "Build templates and boilerplates for common project types",
+                        "Create quality assurance and testing procedures",
+                        "Market rapid prototyping services to startups and enterprises"
+                    ],
+                    tips: [
+                        "Always review and test AI-generated code thoroughly",
+                        "Focus on speed-to-market as your key value proposition",
+                        "Maintain coding standards and best practices",
+                        "Offer ongoing maintenance and optimization services"
+                    ]
+                },
+                {
+                    title: "No-Code AI Application Builder",
+                    category: "App Development",
+                    description: "Help businesses build custom applications using no-code platforms enhanced with AI capabilities.",
+                    steps: [
+                        "Master no-code platforms (Bubble, Webflow, Zapier) with AI integrations",
+                        "Learn to integrate AI APIs into no-code applications",
+                        "Create templates and components for common business needs",
+                        "Build a portfolio of successful no-code AI applications",
+                        "Target small businesses that need custom solutions quickly"
+                    ],
+                    tips: [
+                        "Focus on solving specific business problems, not just building apps",
+                        "Keep solutions simple and user-friendly",
+                        "Offer training so clients can manage their applications",
+                        "Stay updated on new no-code platform features and AI integrations"
+                    ]
+                }
+            ],
+            finance: [
+                {
+                    title: "AI Financial Analysis Service",
+                    category: "Financial Analytics",
+                    description: "Use AI to automate financial analysis, forecasting, and reporting for small and medium businesses.",
+                    steps: [
+                        "Learn AI tools for financial data analysis and visualization",
+                        "Develop standardized financial analysis frameworks",
+                        "Create automated reporting and dashboard systems",
+                        "Build expertise in industry-specific financial metrics",
+                        "Target businesses without dedicated finance teams"
+                    ],
+                    tips: [
+                        "Ensure compliance with accounting standards and regulations",
+                        "Focus on actionable insights, not just data presentation",
+                        "Build trust through accuracy and reliability",
+                        "Offer both one-time analyses and ongoing monitoring services"
+                    ]
+                },
+                {
+                    title: "AI-Powered Investment Research",
+                    category: "Investment Analysis",
+                    description: "Provide AI-enhanced investment research and portfolio optimization services for individual investors and advisors.",
+                    steps: [
+                        "Develop AI models for market analysis and stock screening",
+                        "Create research reports combining AI insights with human analysis",
+                        "Build tools for portfolio optimization and risk assessment",
+                        "Establish credibility through track record and transparency",
+                        "Market to financial advisors and sophisticated individual investors"
+                    ],
+                    tips: [
+                        "Always include proper disclaimers and risk warnings",
+                        "Focus on risk-adjusted returns and diversification",
+                        "Combine quantitative AI analysis with qualitative insights",
+                        "Maintain regulatory compliance and professional standards"
+                    ]
+                }
+            ],
+            consulting: [
+                {
+                    title: "AI Implementation Consulting",
+                    category: "Business Strategy",
+                    description: "Help businesses identify, plan, and implement AI solutions to improve their operations and competitive advantage.",
+                    steps: [
+                        "Develop expertise in various AI tools and their business applications",
+                        "Create frameworks for AI opportunity assessment",
+                        "Build case studies from successful AI implementations",
+                        "Establish partnerships with AI tool vendors and developers",
+                        "Target mid-size businesses ready to adopt AI but lacking expertise"
+                    ],
+                    tips: [
+                        "Start with low-risk, high-impact AI applications",
+                        "Focus on measurable business outcomes",
+                        "Provide ongoing support and optimization services",
+                        "Stay current with rapidly evolving AI landscape"
+                    ]
+                },
+                {
+                    title: "AI Ethics and Compliance Consulting",
+                    category: "Risk Management",
+                    description: "Guide organizations in implementing AI responsibly while maintaining compliance with emerging regulations and ethical standards.",
+                    steps: [
+                        "Study AI ethics frameworks and emerging regulations",
+                        "Develop audit and compliance assessment methodologies",
+                        "Create training programs for responsible AI use",
+                        "Build relationships with legal and compliance professionals",
+                        "Target large enterprises and regulated industries"
+                    ],
+                    tips: [
+                        "Stay ahead of regulatory developments in different jurisdictions",
+                        "Focus on practical implementation, not just theoretical frameworks",
+                        "Build expertise in specific industries (healthcare, finance, etc.)",
+                        "Offer ongoing monitoring and updates as regulations evolve"
+                    ]
+                }
+            ]
+        };
+
+        async function init() {
+            try {
+                // Load saved skills and plans
+                const savedSkills = await db.get("user_skills") || [];
+                const savedPlans = await db.get("saved_plans") || [];
+                
+                skills = savedSkills;
+                renderSkills();
+                
+                if (savedPlans.length > 0) {
+                    renderSavedPlans(savedPlans);
+                }
+                
+                setTimeout(() => {
+                    document.getElementById('loader').classList.add('hidden');
+                }, 1000);
+            } catch (error) {
+                console.error('Init error:', error);
+                document.getElementById('loader').classList.add('hidden');
+            }
+        }
+
+        function renderSkills() {
+            const container = document.getElementById('skillsContainer');
+            const input = container.querySelector('.tag-input');
+            
+            // Remove existing tags
+            container.querySelectorAll('.tag').forEach(tag => tag.remove());
+            
+            // Add current skills as tags
+            skills.forEach((skill, index) => {
+                const tag = document.createElement('div');
+                tag.className = 'tag';
+                tag.innerHTML = `
+                    ${skill}
+                    <button class="tag-remove" onclick="removeSkill(${index})" type="button">×</button>
+                `;
+                container.insertBefore(tag, input);
+            });
+        }
+
+        function addSkill(skill) {
+            skill = skill.trim().toLowerCase();
+            if (skill && !skills.includes(skill)) {
+                skills.push(skill);
+                renderSkills();
+                saveSkills();
+            }
+        }
+
+        function removeSkill(index) {
+            skills.splice(index, 1);
+            renderSkills();
+            saveSkills();
+        }
+
+        async function saveSkills() {
+            try {
+                await db.set("user_skills", skills);
+            } catch (error) {
+                console.error('Error saving skills:', error);
+            }
+        }
+
+        function generateOpportunities() {
+            opportunities = [];
+            const experience = document.getElementById('experience').value;
+            const budget = document.getElementById('budget').value;
+            
+            skills.forEach(skill => {
+                if (opportunityDatabase[skill]) {
+                    opportunities.push(...opportunityDatabase[skill]);
+                }
+            });
+            
+            // Remove duplicates
+            opportunities = opportunities.filter((opp, index, self) => 
+                index === self.findIndex(o => o.title === opp.title)
+            );
+            
+            // Sort by relevance (could be enhanced with more sophisticated logic)
+            opportunities = opportunities.slice(0, 4); // Limit to top 4 opportunities
+            
+            return opportunities;
+        }
+
+        function renderOpportunities(opportunities) {
+            const resultsContainer = document.getElementById('results');
+            
+            if (opportunities.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">🔍</div>
+                        <h3>No opportunities found</h3>
+                        <p>Try adding different skills or interests to discover AI opportunities.</p>
+                    </div>
+                `;
+                resultsContainer.style.display = 'block';
+                return;
+            }
+            
+            resultsContainer.innerHTML = opportunities.map(opp => `
+                <div class="opportunity-card">
+                    <div class="opportunity-header">
+                        <div>
+                            <h3 class="opportunity-title">${opp.title}</h3>
+                        </div>
+                        <div class="opportunity-category">${opp.category}</div>
+                    </div>
+                    
+                    <p class="opportunity-description">${opp.description}</p>
+                    
+                    <div class="steps-section">
+                        <h4 class="section-title">📋 Action Steps</h4>
+                        <ul class="step-list">
+                            ${opp.steps.map((step, index) => `
+                                <li class="step-item">
+                                    <span class="step-number">${index + 1}</span>
+                                    ${step}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="tips-section">
+                        <h4 class="section-title">💡 Pro Tips</h4>
+                        <ul class="tip-list">
+                            ${opp.tips.map(tip => `
+                                <li class="tip-item">${tip}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn" onclick="savePlan('${opp.title.replace(/'/g, "\\'")}')">
+                            💾 Save Action Plan
+                        </button>
+                        <button class="btn btn-secondary" onclick="shareOpportunity('${opp.title.replace(/'/g, "\\'")}')">
+                            🔗 Share
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            resultsContainer.style.display = 'block';
+        }
+
+        async function savePlan(title) {
+            try {
+                const opportunity = opportunities.find(opp => opp.title === title);
+                if (!opportunity) return;
+                
+                const savedPlans = await db.get("saved_plans") || [];
+                
+                // Check if already saved
+                if (savedPlans.find(plan => plan.title === title)) {
+                    showToast("Plan already saved!", "warning");
+                    return;
+                }
+                
+                const plan = {
+                    ...opportunity,
+                    savedAt: new Date().toISOString(),
+                    id: Date.now().toString()
+                };
+                
+                savedPlans.push(plan);
+                await db.set("saved_plans", savedPlans);
+                
+                renderSavedPlans(savedPlans);
+                showToast("Action plan saved successfully!");
+            } catch (error) {
+                console.error('Error saving plan:', error);
+                showToast("Error saving plan", "error");
+            }
+        }
+
+        async function deletePlan(planId) {
+            try {
+                const savedPlans = await db.get("saved_plans") || [];
+                const filteredPlans = savedPlans.filter(plan => plan.id !== planId);
+                await db.set("saved_plans", filteredPlans);
+                renderSavedPlans(filteredPlans);
+                showToast("Plan deleted successfully!");
+            } catch (error) {
+                console.error('Error deleting plan:', error);
+            }
+        }
+
+        async function clearAllPlans() {
+            try {
+                await db.set("saved_plans", []);
+                document.getElementById('savedPlans').style.display = 'none';
+                showToast("All plans cleared!");
+            } catch (error) {
+                console.error('Error clearing plans:', error);
+            }
+        }
+
+        function renderSavedPlans(plans) {
+            const savedPlansSection = document.getElementById('savedPlans');
+            const plansList = document.getElementById('savedPlansList');
+            
+            if (plans.length === 0) {
+                savedPlansSection.style.display = 'none';
+                return;
+            }
+            
+            plansList.innerHTML = plans.map(plan => `
+                <div class="saved-plan-item">
+                    <div class="saved-plan-info">
+                        <h4>${plan.title}</h4>
+                        <p>Saved on ${new Date(plan.savedAt).toLocaleDateString()}</p>
+                    </div>
+                    <div class="saved-plan-actions">
+                        <button class="btn btn-secondary" onclick="viewPlan('${plan.id}')">View</button>
+                        <button class="btn btn-secondary" onclick="deletePlan('${plan.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            savedPlansSection.style.display = 'block';
+        }
+
+        async function viewPlan(planId) {
+            try {
+                const savedPlans = await db.get("saved_plans") || [];
+                const plan = savedPlans.find(p => p.id === planId);
+                if (!plan) return;
+                
+                // Render the plan as if it were in the results
+                renderOpportunities([plan]);
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error viewing plan:', error);
+            }
+        }
+
+        function shareOpportunity(title) {
+            const opportunity = opportunities.find(opp => opp.title === title);
+            if (!opportunity) return;
+            
+            const shareText = `Check out this AI business opportunity: ${opportunity.title} - ${opportunity.description}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: opportunity.title,
+                    text: shareText,
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    showToast("Opportunity details copied to clipboard!");
+                });
+            }
+        }
+
+        function showToast(message, type = "success") {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast show ${type}`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Event listeners
+        document.getElementById('skillInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const input = e.target;
+                if (input.value.trim()) {
+                    addSkill(input.value);
+                    input.value = '';
+                }
+            }
+        });
+
+        document.getElementById('scannerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            if (skills.length === 0) {
+                showToast("Please add at least one skill or interest", "warning");
+                return;
+            }
+            
+            const scanBtn = document.getElementById('scanBtn');
+            const originalText = scanBtn.textContent;
+            scanBtn.textContent = "🔄 Scanning...";
+            scanBtn.disabled = true;
+            
+            setTimeout(() => {
+                const opportunities = generateOpportunities();
+                renderOpportunities(opportunities);
+                
+                scanBtn.textContent = originalText;
+                scanBtn.disabled = false;
+                
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+            }, 1500);
+        });
+
+        document.getElementById('clearAllBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all saved plans?')) {
+                clearAllPlans();
+            }
+        });
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
