@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "launch-test-counter";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counter App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --accent: #00d4ff;
+            --text-primary: #e0e0e0;
+            --text-muted: #888;
+            --border: #333;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            overflow-x: hidden;
+        }
+
+        .loading {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: clamp(2rem, 5vw, 3rem);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            min-width: 300px;
+            max-width: 400px;
+            width: 90vw;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+        }
+
+        .title {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 600;
+            margin-bottom: 2rem;
+            color: var(--accent);
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .counter-display {
+            font-size: clamp(3rem, 8vw, 5rem);
+            font-weight: 700;
+            margin: 2rem 0;
+            color: var(--text-primary);
+            text-shadow: 0 0 30px rgba(224, 224, 224, 0.2);
+            transition: transform 0.2s ease, color 0.3s ease;
+        }
+
+        .counter-display.animate {
+            transform: scale(1.1);
+            color: var(--accent);
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .btn {
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .btn:hover:before {
+            transform: translateX(100%);
+        }
+
+        .btn-increment {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+        }
+
+        .btn-increment:hover {
+            background: linear-gradient(135deg, #00b8e6, #007aa3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-decrement {
+            background: linear-gradient(135deg, #ff4757, #cc3652);
+            color: white;
+        }
+
+        .btn-decrement:hover {
+            background: linear-gradient(135deg, #e63946, #b32f3f);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 71, 87, 0.3);
+        }
+
+        .btn-reset {
+            grid-column: 1 / -1;
+            background: var(--bg-primary);
+            color: var(--text-muted);
+            border: 2px solid var(--border);
+            margin-top: 1rem;
+        }
+
+        .btn-reset:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .stats {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .stat-value {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .empty-state {
+            color: var(--text-muted);
+            font-style: italic;
+            margin: 2rem 0;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 1rem;
+                padding: 2rem 1.5rem;
+            }
+
+            .buttons {
+                gap: 0.75rem;
+            }
+
+            .btn {
+                padding: 0.875rem;
+                font-size: 1.1rem;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .container {
+            animation: fadeIn 0.6s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <h1 class="title">Counter</h1>
+        
+        <div class="counter-display" id="counterDisplay">0</div>
+        
+        <div class="buttons">
+            <button class="btn btn-increment" id="incrementBtn">+</button>
+            <button class="btn btn-decrement" id="decrementBtn">−</button>
+            <button class="btn btn-reset" id="resetBtn">Reset</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">All-time High:</span>
+                <span class="stat-value" id="maxValue">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">All-time Low:</span>
+                <span class="stat-value" id="minValue">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Total Clicks:</span>
+                <span class="stat-value" id="totalClicks">0</span>
+            </div>
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        class CounterApp {
+            constructor() {
+                this.counter = 0;
+                this.stats = {
+                    max: 0,
+                    min: 0,
+                    totalClicks: 0
+                };
+                
+                this.elements = {
+                    loading: document.getElementById('loading'),
+                    display: document.getElementById('counterDisplay'),
+                    incrementBtn: document.getElementById('incrementBtn'),
+                    decrementBtn: document.getElementById('decrementBtn'),
+                    resetBtn: document.getElementById('resetBtn'),
+                    maxValue: document.getElementById('maxValue'),
+                    minValue: document.getElementById('minValue'),
+                    totalClicks: document.getElementById('totalClicks')
+                };
+
+                this.init();
+            }
+
+            async init() {
+                try {
+                    await this.loadData();
+                    this.setupEventListeners();
+                    this.updateDisplay();
+                    this.hideLoading();
+                } catch (error) {
+                    console.error('Failed to initialize app:', error);
+                    this.hideLoading();
+                }
+            }
+
+            async loadData() {
+                try {
+                    const savedCounter = await db.get('counter');
+                    const savedStats = await db.get('stats');
+                    
+                    if (savedCounter !== null) {
+                        this.counter = savedCounter;
+                    }
+                    
+                    if (savedStats) {
+                        this.stats = { ...this.stats, ...savedStats };
+                    }
+                } catch (error) {
+                    console.error('Failed to load data:', error);
+                }
+            }
+
+            async saveData() {
+                try {
+                    await db.set('counter', this.counter);
+                    await db.set('stats', this.stats);
+                } catch (error) {
+                    console.error('Failed to save data:', error);
+                }
+            }
+
+            setupEventListeners() {
+                this.elements.incrementBtn.addEventListener('click', () => this.increment());
+                this.elements.decrementBtn.addEventListener('click', () => this.decrement());
+                this.elements.resetBtn.addEventListener('click', () => this.reset());
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowUp' || e.key === '+' || e.key === '=') {
+                        e.preventDefault();
+                        this.increment();
+                    } else if (e.key === 'ArrowDown' || e.key === '-') {
+                        e.preventDefault();
+                        this.decrement();
+                    } else if (e.key === 'r' || e.key === 'R') {
+                        e.preventDefault();
+                        this.reset();
+                    }
+                });
+            }
+
+            async increment() {
+                this.counter++;
+                this.stats.totalClicks++;
+                
+                if (this.counter > this.stats.max) {
+                    this.stats.max = this.counter;
+                }
+                
+                this.updateDisplay();
+                this.animateCounter();
+                await this.saveData();
+            }
+
+            async decrement() {
+                this.counter--;
+                this.stats.totalClicks++;
+                
+                if (this.counter < this.stats.min) {
+                    this.stats.min = this.counter;
+                }
+                
+                this.updateDisplay();
+                this.animateCounter();
+                await this.saveData();
+            }
+
+            async reset() {
+                this.counter = 0;
+                this.updateDisplay();
+                this.animateCounter();
+                await this.saveData();
+            }
+
+            updateDisplay() {
+                this.elements.display.textContent = this.counter;
+                this.elements.maxValue.textContent = this.stats.max;
+                this.elements.minValue.textContent = this.stats.min;
+                this.elements.totalClicks.textContent = this.stats.totalClicks;
+            }
+
+            animateCounter() {
+                this.elements.display.classList.add('animate');
+                setTimeout(() => {
+                    this.elements.display.classList.remove('animate');
+                }, 200);
+            }
+
+            hideLoading() {
+                setTimeout(() => {
+                    this.elements.loading.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        // Initialize app when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new CounterApp();
+        });
+    </script>
+</body>
+</html>
