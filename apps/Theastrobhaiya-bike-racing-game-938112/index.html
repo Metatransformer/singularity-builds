@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "Theastrobhaiya-bike-racing-game-938112";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bike Racing Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+            color: #e0e0e0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 30%, #228B22 30%, #228B22 100%);
+            cursor: crosshair;
+            border: 2px solid #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .ui-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(10, 10, 10, 0.8);
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: 1px solid #00d4ff;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .score {
+            font-size: clamp(16px, 4vw, 24px);
+            font-weight: bold;
+            color: #00d4ff;
+            margin-bottom: 5px;
+        }
+
+        .speed {
+            font-size: clamp(14px, 3vw, 18px);
+            color: #e0e0e0;
+        }
+
+        .menu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 10, 10, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            border: 2px solid #00d4ff;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+            z-index: 100;
+        }
+
+        .menu h1 {
+            font-size: clamp(24px, 6vw, 48px);
+            color: #00d4ff;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .menu p {
+            margin-bottom: 30px;
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #0a0a0a;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+        }
+
+        .leaderboard {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            border: 1px solid #333;
+        }
+
+        .leaderboard h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+        }
+
+        .leaderboard-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 10, 0.8);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 1px solid #00d4ff;
+            font-size: 14px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top: 3px solid #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .ui-overlay {
+                top: 10px;
+                left: 10px;
+                padding: 10px 15px;
+            }
+            
+            .controls {
+                bottom: 10px;
+                padding: 10px 15px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="ui-overlay">
+        <div class="score" id="score">Score: 0</div>
+        <div class="speed" id="speed">Speed: 0 km/h</div>
+    </div>
+
+    <div class="controls" id="controls">
+        Desktop: Arrow Keys to steer, Space to brake<br>
+        Mobile: Tilt device or touch left/right side of screen
+    </div>
+
+    <div class="menu" id="startMenu">
+        <h1>🚴‍♂️ Bike Racing</h1>
+        <p>Race through traffic and collect coins!<br>Avoid crashes and try to beat your high score.</p>
+        <button class="btn" onclick="startGame()">Start Race</button>
+        <div class="leaderboard" id="leaderboard">
+            <h3>🏆 High Scores</h3>
+            <div id="leaderboardList">Loading...</div>
+        </div>
+    </div>
+
+    <div class="menu hidden" id="gameOverMenu">
+        <h1>Race Over!</h1>
+        <p id="finalScore">Your Score: 0</p>
+        <p id="newRecord" class="hidden" style="color: #00ff00;">🎉 New High Score!</p>
+        <button class="btn" onclick="startGame()">Race Again</button>
+        <button class="btn" onclick="showMainMenu()">Main Menu</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameState = 'menu'; // 'menu', 'playing', 'gameOver'
+        let animationId;
+        let gameSpeed = 3;
+        let score = 0;
+        let distance = 0;
+        let coins = [];
+        let obstacles = [];
+        let particles = [];
+        let keys = {};
+        let tiltX = 0;
+
+        // Bike object
+        const bike = {
+            x: 0,
+            y: 0,
+            width: 40,
+            height: 60,
+            speed: 0,
+            maxSpeed: 8,
+            targetX: 0
+        };
+
+        // Road lines
+        let roadLines = [];
+
+        // Sound effects using Web Audio API
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(frequency, duration, type = 'sine') {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            bike.x = canvas.width / 2 - bike.width / 2;
+            bike.y = canvas.height - bike.height - 50;
+            bike.targetX = bike.x;
+
+            // Initialize road lines
+            roadLines = [];
+            for (let i = 0; i < canvas.height / 40 + 2; i++) {
+                roadLines.push({
+                    y: i * 40 - 20
+                });
+            }
+        }
+
+        function drawBike() {
+            ctx.fillStyle = '#ff4444';
+            ctx.fillRect(bike.x, bike.y, bike.width, bike.height);
+            
+            // Bike details
+            ctx.fillStyle = '#333';
+            ctx.fillRect(bike.x + 5, bike.y + 10, 8, 8); // Head
+            ctx.fillRect(bike.x + 27, bike.y + 10, 8, 8);
+            
+            // Wheels
+            ctx.beginPath();
+            ctx.arc(bike.x + 8, bike.y + 50, 6, 0, Math.PI * 2);
+            ctx.arc(bike.x + 32, bike.y + 50, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#222';
+            ctx.fill();
+        }
+
+        function drawRoad() {
+            // Road surface
+            const roadWidth = Math.min(canvas.width * 0.6, 400);
+            const roadLeft = (canvas.width - roadWidth) / 2;
+            
+            ctx.fillStyle = '#333';
+            ctx.fillRect(roadLeft, 0, roadWidth, canvas.height);
+            
+            // Road lines
+            ctx.fillStyle = '#fff';
+            roadLines.forEach(line => {
+                ctx.fillRect(canvas.width / 2 - 2, line.y, 4, 20);
+            });
+            
+            // Road edges
+            ctx.fillStyle = '#666';
+            ctx.fillRect(roadLeft - 5, 0, 5, canvas.height);
+            ctx.fillRect(roadLeft + roadWidth, 0, 5, canvas.height);
+        }
+
+        function updateRoad() {
+            roadLines.forEach(line => {
+                line.y += gameSpeed;
+                if (line.y > canvas.height) {
+                    line.y = -20;
+                }
+            });
+        }
+
+        function spawnCoin() {
+            if (Math.random() < 0.02) {
+                const roadWidth = Math.min(canvas.width * 0.6, 400);
+                const roadLeft = (canvas.width - roadWidth) / 2;
+                
+                coins.push({
+                    x: roadLeft + Math.random() * (roadWidth - 30),
+                    y: -30,
+                    width: 30,
+                    height: 30,
+                    collected: false
+                });
+            }
+        }
+
+        function spawnObstacle() {
+            if (Math.random() < 0.01 + score * 0.00001) {
+                const roadWidth = Math.min(canvas.width * 0.6, 400);
+                const roadLeft = (canvas.width - roadWidth) / 2;
+                
+                obstacles.push({
+                    x: roadLeft + Math.random() * (roadWidth - 50),
+                    y: -60,
+                    width: 50,
+                    height: 60,
+                    speed: gameSpeed + Math.random() * 2
+                });
+            }
+        }
+
+        function updateCoins() {
+            coins.forEach((coin, index) => {
+                coin.y += gameSpeed;
+                
+                // Check collision with bike
+                if (!coin.collected && 
+                    coin.x < bike.x + bike.width &&
+                    coin.x + coin.width > bike.x &&
+                    coin.y < bike.y + bike.height &&
+                    coin.y + coin.height > bike.y) {
+                    
+                    coin.collected = true;
+                    score += 10;
+                    playSound(800, 0.1);
+                    
+                    // Add particle effect
+                    for (let i = 0; i < 8; i++) {
+                        particles.push({
+                            x: coin.x + coin.width / 2,
+                            y: coin.y + coin.height / 2,
+                            vx: (Math.random() - 0.5) * 10,
+                            vy: (Math.random() - 0.5) * 10,
+                            life: 30,
+                            color: '#ffdd00'
+                        });
+                    }
+                }
+                
+                // Remove coins that are off screen
+                if (coin.y > canvas.height + 50) {
+                    coins.splice(index, 1);
+                }
+            });
+        }
+
+        function updateObstacles() {
+            obstacles.forEach((obstacle, index) => {
+                obstacle.y += obstacle.speed;
+                
+                // Check collision with bike
+                if (obstacle.x < bike.x + bike.width - 10 &&
+                    obstacle.x + obstacle.width > bike.x + 10 &&
+                    obstacle.y < bike.y + bike.height - 10 &&
+                    obstacle.y + obstacle.height > bike.y + 10) {
+                    
+                    gameOver();
+                    return;
+                }
+                
+                // Remove obstacles that are off screen
+                if (obstacle.y > canvas.height + 100) {
+                    obstacles.splice(index, 1);
+                }
+            });
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function drawCoins() {
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    ctx.fillStyle = '#ffdd00';
+                    ctx.beginPath();
+                    ctx.arc(coin.x + coin.width / 2, coin.y + coin.height / 2, coin.width / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Coin shine
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(coin.x + coin.width / 2 - 5, coin.y + coin.height / 2 - 5, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                
+                // Car details
+                ctx.fillStyle = '#444';
+                ctx.fillRect(obstacle.x + 5, obstacle.y + 10, obstacle.width - 10, 20);
+                
+                // Windows
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(obstacle.x + 8, obstacle.y + 13, obstacle.width - 16, 14);
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.fillStyle = particle.color;
+                ctx.globalAlpha = particle.life / 30;
+                ctx.fillRect(particle.x - 2, particle.y - 2, 4, 4);
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function updateBike() {
+            // Handle input
+            if (keys['ArrowLeft'] || tiltX < -5) {
+                bike.targetX = Math.max(bike.targetX - 8, (canvas.width - Math.min(canvas.width * 0.6, 400)) / 2);
+            }
+            if (keys['ArrowRight'] || tiltX > 5) {
+                bike.targetX = Math.min(bike.targetX + 8, (canvas.width + Math.min(canvas.width * 0.6, 400)) / 2 - bike.width);
+            }
+            
+            // Smooth movement
+            bike.x += (bike.targetX - bike.x) * 0.1;
+            
+            // Speed control
+            if (keys[' ']) {
+                bike.speed = Math.max(bike.speed - 0.2, 1);
+            } else {
+                bike.speed = Math.min(bike.speed + 0.1, bike.maxSpeed);
+            }
+            
+            gameSpeed = bike.speed;
+        }
+
+        function updateGame() {
+            distance += gameSpeed;
+            score += Math.floor(gameSpeed / 2);
+            
+            updateRoad();
+            updateBike();
+            spawnCoin();
+            spawnObstacle();
+            updateCoins();
+            updateObstacles();
+            updateParticles();
+            
+            // Update UI
+            document.getElementById('score').textContent = `Score: ${score}`;
+            document.getElementById('speed').textContent = `Speed: ${Math.floor(bike.speed * 15)} km/h`;
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawRoad();
+            drawCoins();
+            drawObstacles();
+            drawBike();
+            drawParticles();
+        }
+
+        function gameLoop() {
+            if (gameState === 'playing') {
+                updateGame();
+                drawGame();
+                animationId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function gameOver() {
+            gameState = 'gameOver';
+            playSound(200, 0.5, 'sawtooth');
+            
+            // Save high score
+            saveScore(score);
+            
+            document.getElementById('finalScore').textContent = `Your Score: ${score}`;
+            document.getElementById('gameOverMenu').classList.remove('hidden');
+            document.getElementById('controls').classList.add('hidden');
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            distance = 0;
+            coins = [];
+            obstacles = [];
+            particles = [];
+            gameSpeed = 3;
+            
+            bike.x = canvas.width / 2 - bike.width / 2;
+            bike.targetX = bike.x;
+            bike.speed = 3;
+            
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('gameOverMenu').classList.add('hidden');
+            document.getElementById('controls').classList.remove('hidden');
+            
+            gameLoop();
+        }
+
+        function showMainMenu() {
+            gameState = 'menu';
+            document.getElementById('gameOverMenu').classList.add('hidden');
+            document.getElementById('startMenu').classList.remove('hidden');
+            document.getElementById('controls').classList.add('hidden');
+            loadLeaderboard();
+        }
+
+        async function saveScore(newScore) {
+            try {
+                let scores = await db.get('highScores') || [];
+                scores.push({
+                    score: newScore,
+                    date: new Date().toLocaleDateString(),
+                    timestamp: Date.now()
+                });
+                
+                scores.sort((a, b) => b.score - a.score);
+                scores = scores.slice(0, 10); // Keep only top 10
+                
+                await db.set('highScores', scores);
+                
+                // Check if it's a new record
+                if (scores[0] && scores[0].score === newScore && scores[0].timestamp === scores[scores.length - 1].timestamp) {
+                    document.getElementById('newRecord').classList.remove('hidden');
+                }
+                
+                loadLeaderboard();
+            } catch (error) {
+                console.error('Error saving score:', error);
+            }
+        }
+
+        async function loadLeaderboard() {
+            try {
+                const scores = await db.get('highScores') || [];
+                const leaderboardList = document.getElementById('leaderboardList');
+                
+                if (scores.length === 0) {
+                    leaderboardList.innerHTML = '<div style="opacity: 0.6; text-align: center;">No scores yet - be the first!</div>';
+                    return;
+                }
+                
+                leaderboardList.innerHTML = scores.map((entry, index) => 
+                    `<div class="leaderboard-entry">
+                        <span>#${index + 1}</span>
+                        <span>${entry.score} pts</span>
+                        <span>${entry.date}</span>
+                    </div>`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                document.getElementById('leaderboardList').innerHTML = '<div style="opacity: 0.6; text-align: center;">Failed to load scores</div>';
+            }
+        }
+
+        // Event listeners
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === ' ') e.preventDefault();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // Mobile controls
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', (e) => {
+                tiltX = e.gamma || 0; // Left-right tilt
+            });
+        }
+
+        // Touch controls
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const touchX = touch.clientX - rect.left;
+            
+            if (touchX < canvas.width / 2) {
+                keys['ArrowLeft'] = true;
+            } else {
+                keys['ArrowRight'] = true;
+            }
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys['ArrowLeft'] = false;
+            keys['ArrowRight'] = false;
+        });
+
+        // Initialize game
+        async function init() {
+            document.getElementById('loading').classList.add('hidden');
+            resizeCanvas();
+            await loadLeaderboard();
+        }
+
+        init();
+    </script>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+</body>
+</html>
