@@ -48,21 +48,24 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Color Palette Designer</title>
     <style>
-        :root {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #1a1a1a;
-            --accent: #00d4ff;
-            --text-primary: #e0e0e0;
-            --text-secondary: #a0a0a0;
-            --border: #333;
-            --success: #00ff88;
-            --error: #ff4444;
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --text-primary: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --accent: #00d4ff;
+            --accent-hover: #00b8e6;
+            --success: #00ff88;
+            --error: #ff4444;
+            --border: #333;
+            --shadow: rgba(0, 0, 0, 0.5);
         }
 
         body {
@@ -73,28 +76,30 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
             overflow-x: hidden;
         }
 
-        .loader {
+        .loading {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             background: var(--bg-primary);
-            display: grid;
-            place-items: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             z-index: 10000;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
+            opacity: 1;
+            transition: opacity 0.5s ease;
         }
 
-        .loader.hidden {
+        .loading.hidden {
             opacity: 0;
-            visibility: hidden;
+            pointer-events: none;
         }
 
         .spinner {
             width: 40px;
             height: 40px;
-            border: 3px solid #333;
+            border: 3px solid var(--bg-secondary);
             border-top: 3px solid var(--accent);
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -108,252 +113,246 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: clamp(1rem, 4vw, 2rem);
-            opacity: 0;
-            animation: fadeIn 0.8s ease 0.3s forwards;
+            padding: 2rem;
+            animation: fadeIn 0.6s ease-out;
         }
 
         @keyframes fadeIn {
-            to { opacity: 1; }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        header {
+        .header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
         }
 
-        h1 {
+        .header h1 {
             font-size: clamp(2rem, 5vw, 3rem);
             font-weight: 700;
-            background: linear-gradient(135deg, var(--accent), #00ffaa);
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent), var(--success));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 0.5rem;
         }
 
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: clamp(0.9rem, 2vw, 1.1rem);
+        .header p {
+            color: var(--text-muted);
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
         }
 
-        .controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        .toolbar {
+            display: flex;
             gap: 1rem;
             margin-bottom: 2rem;
-        }
-
-        .control-group {
-            background: var(--bg-secondary);
-            padding: 1.5rem;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-        }
-
-        .control-group:hover {
-            border-color: var(--accent);
-            transform: translateY(-2px);
-        }
-
-        .control-group h3 {
-            color: var(--accent);
-            margin-bottom: 1rem;
-            font-size: 1.1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
         }
 
         .btn {
-            background: linear-gradient(135deg, var(--accent), #0099cc);
-            color: white;
-            border: none;
-            padding: 0.8rem 1.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
             border-radius: 8px;
-            font-size: 0.95rem;
             cursor: pointer;
-            transition: all 0.2s ease;
+            font-size: 0.9rem;
             font-family: inherit;
-            font-weight: 500;
-            width: 100%;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
         }
 
-        .btn:active {
-            transform: translateY(0);
+        .btn.primary {
+            background: var(--accent);
+            color: var(--bg-primary);
         }
 
-        .btn.secondary {
+        .btn.primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        input, select {
+            padding: 0.75rem;
             background: var(--bg-secondary);
             border: 1px solid var(--border);
             color: var(--text-primary);
-        }
-
-        .btn.secondary:hover {
-            border-color: var(--accent);
-            box-shadow: 0 2px 8px rgba(0, 212, 255, 0.2);
-        }
-
-        .input {
-            width: 100%;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 0.8rem;
             border-radius: 6px;
-            font-size: 0.95rem;
-            transition: all 0.2s ease;
             font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
         }
 
-        .input:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: var(--accent);
             box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
         }
 
-        .palette-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .palette {
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            padding: 1.5rem;
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .palette:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.1);
-            border-color: var(--accent);
-        }
-
-        .palette-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-        }
-
-        .colors-row {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .color-swatch {
-            width: 50px;
-            height: 50px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: 2px solid transparent;
-            position: relative;
-        }
-
-        .color-swatch:hover {
-            transform: scale(1.1);
-            border-color: var(--accent);
-        }
-
-        .color-code {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            font-family: 'Courier New', monospace;
-            margin-top: 0.25rem;
-            text-align: center;
-        }
-
-        .palette-actions {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .btn-small {
-            padding: 0.5rem 1rem;
-            font-size: 0.8rem;
-            flex: 1;
-            min-width: 80px;
+        input[type="text"] {
+            width: 200px;
         }
 
         .current-palette {
             background: var(--bg-secondary);
-            border-radius: 16px;
-            padding: 2rem;
+            border-radius: 12px;
+            padding: 1.5rem;
             margin-bottom: 2rem;
             border: 1px solid var(--border);
+            box-shadow: 0 4px 20px var(--shadow);
         }
 
         .current-palette h2 {
+            margin-bottom: 1rem;
             color: var(--accent);
-            margin-bottom: 1.5rem;
-            font-size: 1.4rem;
+            font-size: 1.3rem;
         }
 
-        .color-inputs {
+        .colors-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
 
-        .color-input-group {
+        .color-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+
+        .color-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .color-preview {
+            height: 80px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .color-info {
+            padding: 0.75rem;
+        }
+
+        .color-hex {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .color-actions {
             display: flex;
-            flex-direction: column;
             gap: 0.5rem;
         }
 
-        .color-picker {
-            width: 60px;
-            height: 40px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
+        .btn-small {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            min-width: auto;
+        }
+
+        .saved-palettes {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px var(--shadow);
+        }
+
+        .saved-palettes h2 {
+            margin-bottom: 1rem;
+            color: var(--accent);
+            font-size: 1.3rem;
+        }
+
+        .palette-item {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
             transition: all 0.2s ease;
         }
 
-        .color-picker:hover {
-            transform: scale(1.05);
+        .palette-item:hover {
+            border-color: var(--accent);
         }
 
-        .color-input-row {
+        .palette-preview {
             display: flex;
-            gap: 0.5rem;
-            align-items: center;
+            height: 30px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
         }
 
-        .hex-input {
+        .palette-color {
             flex: 1;
-            font-family: 'Courier New', monospace;
+        }
+
+        .palette-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .palette-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .palette-date {
+            font-size: 0.8rem;
+            color: var(--text-muted);
         }
 
         .toast {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: var(--success);
-            color: white;
             padding: 1rem 1.5rem;
             border-radius: 8px;
+            color: white;
             font-weight: 500;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
             z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            max-width: 300px;
         }
 
         .toast.show {
             transform: translateX(0);
+        }
+
+        .toast.success {
+            background: var(--success);
+            color: var(--bg-primary);
         }
 
         .toast.error {
@@ -363,92 +362,116 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
         .empty-state {
             text-align: center;
             padding: 3rem 1rem;
-            color: var(--text-secondary);
+            color: var(--text-muted);
         }
 
         .empty-state h3 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             color: var(--text-primary);
         }
 
+        .harmony-options {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .harmony-btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .harmony-btn:hover, .harmony-btn.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
         @media (max-width: 768px) {
-            .controls {
-                grid-template-columns: 1fr;
+            .container {
+                padding: 1rem;
             }
             
-            .color-inputs {
-                grid-template-columns: 1fr;
+            .toolbar {
+                justify-content: stretch;
             }
             
-            .palette-actions {
-                flex-direction: column;
+            .btn {
+                flex: 1;
+                justify-content: center;
+                min-width: 0;
             }
             
-            .colors-row {
-                flex-wrap: wrap;
+            .input-group {
+                width: 100%;
             }
             
-            .color-swatch {
-                width: 40px;
-                height: 40px;
+            input[type="text"] {
+                flex: 1;
+                width: auto;
+            }
+            
+            .colors-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             }
         }
     </style>
 </head>
 <body>
-    <div class="loader" id="loader">
+    <div class="loading" id="loading">
         <div class="spinner"></div>
     </div>
 
     <div class="container">
-        <header>
+        <header class="header">
             <h1>Color Palette Designer</h1>
-            <p class="subtitle">Create, save, and manage beautiful color palettes</p>
+            <p>Create, save, and explore beautiful color harmonies</p>
         </header>
 
-        <div class="controls">
-            <div class="control-group">
-                <h3>Generate Palette</h3>
-                <button class="btn" onclick="generateRandomPalette()">Random Palette</button>
+        <div class="toolbar">
+            <div class="input-group">
+                <input type="text" id="paletteNameInput" placeholder="Palette name" maxlength="30">
+                <button class="btn primary" onclick="savePalette()">💾 Save Palette</button>
             </div>
-            
-            <div class="control-group">
-                <h3>From Base Color</h3>
-                <input type="color" class="color-picker" id="baseColor" value="#00d4ff" onchange="generateFromBase()">
-                <button class="btn secondary" onclick="generateFromBase()">Generate</button>
-            </div>
-            
-            <div class="control-group">
-                <h3>Import from URL</h3>
-                <input type="text" class="input" id="imageUrl" placeholder="Image URL">
-                <button class="btn secondary" onclick="extractFromImage()">Extract Colors</button>
-            </div>
+            <button class="btn" onclick="generateRandomPalette()">🎲 Random</button>
+            <button class="btn" onclick="clearPalette()">🗑️ Clear</button>
+            <button class="btn" onclick="exportPalette()">📋 Export CSS</button>
+        </div>
+
+        <div class="harmony-options">
+            <button class="harmony-btn active" data-type="complementary" onclick="selectHarmony(this, 'complementary')">Complementary</button>
+            <button class="harmony-btn" data-type="triadic" onclick="selectHarmony(this, 'triadic')">Triadic</button>
+            <button class="harmony-btn" data-type="tetradic" onclick="selectHarmony(this, 'tetradic')">Tetradic</button>
+            <button class="harmony-btn" data-type="analogous" onclick="selectHarmony(this, 'analogous')">Analogous</button>
+            <button class="harmony-btn" data-type="monochromatic" onclick="selectHarmony(this, 'monochromatic')">Monochromatic</button>
         </div>
 
         <div class="current-palette">
             <h2>Current Palette</h2>
-            <div class="color-inputs" id="colorInputs">
-                <!-- Color inputs will be generated here -->
+            <div class="colors-grid" id="colorsGrid">
+                <!-- Colors will be populated here -->
             </div>
-            <div class="colors-row" id="currentColors">
-                <!-- Current colors will be displayed here -->
-            </div>
-            <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
-                <input type="text" class="input" id="paletteName" placeholder="Palette name" style="flex: 1; min-width: 200px;">
-                <button class="btn" onclick="savePalette()">Save Palette</button>
-                <button class="btn secondary" onclick="copyPalette()">Copy Colors</button>
+            <div style="text-align: center; margin-top: 1rem;">
+                <input type="color" id="colorPicker" style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;">
+                <button class="btn" onclick="addColorFromPicker()" style="margin-left: 0.5rem;">Add Color</button>
             </div>
         </div>
 
-        <h2 style="color: var(--accent); margin-bottom: 1rem;">Saved Palettes</h2>
-        <div class="palette-grid" id="paletteGrid">
-            <!-- Saved palettes will be displayed here -->
-        </div>
-
-        <div class="empty-state" id="emptyState" style="display: none;">
-            <h3>No saved palettes yet</h3>
-            <p>Create your first palette using the tools above</p>
+        <div class="saved-palettes">
+            <h2>Saved Palettes</h2>
+            <div id="savedPalettes">
+                <div class="empty-state">
+                    <h3>No saved palettes yet</h3>
+                    <p>Create and save your first color palette above</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -457,14 +480,27 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
     <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
 
     <script>
-        let currentPalette = ['#00d4ff', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'];
+        let currentPalette = [];
+        let currentHarmony = 'complementary';
 
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${isError ? 'error' : ''}`;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
+        // Initialize app
+        window.addEventListener('DOMContentLoaded', async () => {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Show loading
+            generateRandomPalette();
+            await loadSavedPalettes();
+            document.getElementById('loading').classList.add('hidden');
+        });
+
+        // Color harmony generators
+        function hslToHex(h, s, l) {
+            l /= 100;
+            const a = s * Math.min(l, 1 - l) / 100;
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
         }
 
         function hexToHsl(hex) {
@@ -492,212 +528,246 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
             return [h * 360, s * 100, l * 100];
         }
 
-        function hslToHex(h, s, l) {
-            l /= 100;
-            const a = s * Math.min(l, 1 - l) / 100;
-            const f = n => {
-                const k = (n + h / 30) % 12;
-                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-                return Math.round(255 * color).toString(16).padStart(2, '0');
-            };
-            return `#${f(0)}${f(8)}${f(4)}`;
+        function generateHarmony(baseHue, type) {
+            const baseSat = 70 + Math.random() * 30;
+            const baseLum = 50 + Math.random() * 30;
+            
+            switch (type) {
+                case 'complementary':
+                    return [
+                        hslToHex(baseHue, baseSat, baseLum),
+                        hslToHex((baseHue + 180) % 360, baseSat, baseLum),
+                        hslToHex(baseHue, baseSat * 0.6, baseLum + 20),
+                        hslToHex((baseHue + 180) % 360, baseSat * 0.6, baseLum - 20)
+                    ];
+                    
+                case 'triadic':
+                    return [
+                        hslToHex(baseHue, baseSat, baseLum),
+                        hslToHex((baseHue + 120) % 360, baseSat, baseLum),
+                        hslToHex((baseHue + 240) % 360, baseSat, baseLum),
+                        hslToHex(baseHue, baseSat * 0.5, baseLum + 25)
+                    ];
+                    
+                case 'tetradic':
+                    return [
+                        hslToHex(baseHue, baseSat, baseLum),
+                        hslToHex((baseHue + 90) % 360, baseSat, baseLum),
+                        hslToHex((baseHue + 180) % 360, baseSat, baseLum),
+                        hslToHex((baseHue + 270) % 360, baseSat, baseLum)
+                    ];
+                    
+                case 'analogous':
+                    return [
+                        hslToHex((baseHue - 30) % 360, baseSat, baseLum),
+                        hslToHex(baseHue, baseSat, baseLum),
+                        hslToHex((baseHue + 30) % 360, baseSat, baseLum),
+                        hslToHex((baseHue + 60) % 360, baseSat, baseLum)
+                    ];
+                    
+                case 'monochromatic':
+                    return [
+                        hslToHex(baseHue, baseSat, baseLum - 30),
+                        hslToHex(baseHue, baseSat, baseLum - 10),
+                        hslToHex(baseHue, baseSat, baseLum + 10),
+                        hslToHex(baseHue, baseSat, baseLum + 30)
+                    ];
+                    
+                default:
+                    return [hslToHex(baseHue, baseSat, baseLum)];
+            }
+        }
+
+        function selectHarmony(btn, type) {
+            document.querySelectorAll('.harmony-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentHarmony = type;
         }
 
         function generateRandomPalette() {
-            const palette = [];
             const baseHue = Math.random() * 360;
-            
-            for (let i = 0; i < 5; i++) {
-                const hue = (baseHue + (i * 72)) % 360;
-                const saturation = 60 + Math.random() * 30;
-                const lightness = 30 + Math.random() * 40;
-                palette.push(hslToHex(hue, saturation, lightness));
-            }
-            
-            currentPalette = palette;
-            updateCurrentPalette();
+            currentPalette = generateHarmony(baseHue, currentHarmony);
+            renderPalette();
         }
 
-        function generateFromBase() {
-            const baseColor = document.getElementById('baseColor').value;
-            const [h, s, l] = hexToHsl(baseColor);
-            
-            const palette = [baseColor];
-            
-            // Complementary
-            palette.push(hslToHex((h + 180) % 360, s, l));
-            
-            // Triadic
-            palette.push(hslToHex((h + 120) % 360, s, l));
-            palette.push(hslToHex((h + 240) % 360, s, l));
-            
-            // Analogous
-            palette.push(hslToHex((h + 30) % 360, s, Math.max(20, l - 20)));
-            
-            currentPalette = palette;
-            updateCurrentPalette();
-        }
-
-        function updateCurrentPalette() {
-            const colorInputs = document.getElementById('colorInputs');
-            const currentColors = document.getElementById('currentColors');
-            
-            colorInputs.innerHTML = '';
-            currentColors.innerHTML = '';
-            
-            currentPalette.forEach((color, index) => {
-                // Color input group
-                const inputGroup = document.createElement('div');
-                inputGroup.className = 'color-input-group';
-                inputGroup.innerHTML = `
-                    <div class="color-input-row">
-                        <input type="color" class="color-picker" value="${color}" onchange="updateColor(${index}, this.value)">
-                        <input type="text" class="input hex-input" value="${color}" onchange="updateColorFromHex(${index}, this.value)">
-                    </div>
-                `;
-                colorInputs.appendChild(inputGroup);
-                
-                // Color swatch
-                const swatch = document.createElement('div');
-                swatch.className = 'color-swatch';
-                swatch.style.backgroundColor = color;
-                swatch.onclick = () => copyToClipboard(color);
-                
-                const code = document.createElement('div');
-                code.className = 'color-code';
-                code.textContent = color;
-                
-                const container = document.createElement('div');
-                container.style.display = 'flex';
-                container.style.flexDirection = 'column';
-                container.style.alignItems = 'center';
-                container.appendChild(swatch);
-                container.appendChild(code);
-                
-                currentColors.appendChild(container);
-            });
-        }
-
-        function updateColor(index, color) {
-            currentPalette[index] = color;
-            updateCurrentPalette();
-        }
-
-        function updateColorFromHex(index, color) {
-            if (/^#[0-9A-F]{6}$/i.test(color)) {
-                currentPalette[index] = color;
-                updateCurrentPalette();
+        function addColorFromPicker() {
+            const color = document.getElementById('colorPicker').value;
+            if (currentPalette.length < 8 && !currentPalette.includes(color)) {
+                currentPalette.push(color);
+                renderPalette();
             }
         }
 
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                showToast(`Copied ${text}!`);
+        function removeColor(index) {
+            currentPalette.splice(index, 1);
+            renderPalette();
+        }
+
+        function copyColor(color) {
+            navigator.clipboard.writeText(color).then(() => {
+                showToast(`Copied ${color}`, 'success');
             }).catch(() => {
-                showToast('Failed to copy', true);
+                showToast('Failed to copy color', 'error');
             });
         }
 
-        function copyPalette() {
-            const colors = currentPalette.join(', ');
-            copyToClipboard(colors);
-        }
-
-        async function savePalette() {
-            const name = document.getElementById('paletteName').value.trim();
-            if (!name) {
-                showToast('Please enter a palette name', true);
+        function renderPalette() {
+            const grid = document.getElementById('colorsGrid');
+            
+            if (currentPalette.length === 0) {
+                grid.innerHTML = '<div class="empty-state"><p>Add colors to start building your palette</p></div>';
                 return;
             }
             
+            grid.innerHTML = currentPalette.map((color, index) => `
+                <div class="color-card">
+                    <div class="color-preview" style="background-color: ${color}" onclick="copyColor('${color}')"></div>
+                    <div class="color-info">
+                        <div class="color-hex">${color.toUpperCase()}</div>
+                        <div class="color-actions">
+                            <button class="btn btn-small" onclick="copyColor('${color}')">Copy</button>
+                            <button class="btn btn-small" onclick="removeColor(${index})">Remove</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearPalette() {
+            currentPalette = [];
+            renderPalette();
+        }
+
+        async function savePalette() {
+            const name = document.getElementById('paletteNameInput').value.trim();
+            
+            if (!name) {
+                showToast('Please enter a palette name', 'error');
+                return;
+            }
+            
+            if (currentPalette.length === 0) {
+                showToast('Add some colors first', 'error');
+                return;
+            }
+            
+            const palette = {
+                name,
+                colors: [...currentPalette],
+                createdAt: new Date().toISOString()
+            };
+            
             try {
-                const palette = {
-                    name,
-                    colors: [...currentPalette],
-                    createdAt: new Date().toISOString()
-                };
-                
-                await db.set(`palette_${Date.now()}`, palette);
-                showToast('Palette saved!');
-                document.getElementById('paletteName').value = '';
-                loadSavedPalettes();
+                const key = `palette_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                await db.set(key, palette);
+                document.getElementById('paletteNameInput').value = '';
+                await loadSavedPalettes();
+                showToast('Palette saved successfully!', 'success');
             } catch (error) {
-                showToast('Failed to save palette', true);
+                showToast('Failed to save palette', 'error');
             }
-        }
-
-        async function deletePalette(key) {
-            if (confirm('Delete this palette?')) {
-                try {
-                    await db.delete(key);
-                    showToast('Palette deleted');
-                    loadSavedPalettes();
-                } catch (error) {
-                    showToast('Failed to delete palette', true);
-                }
-            }
-        }
-
-        function loadPalette(colors) {
-            currentPalette = [...colors];
-            updateCurrentPalette();
-            showToast('Palette loaded!');
         }
 
         async function loadSavedPalettes() {
             try {
-                const data = await db.list();
-                const palettes = data.filter(item => item.key.startsWith('palette_'));
-                
-                const grid = document.getElementById('paletteGrid');
-                const emptyState = document.getElementById('emptyState');
+                const palettes = await db.list();
+                const paletteContainer = document.getElementById('savedPalettes');
                 
                 if (palettes.length === 0) {
-                    grid.innerHTML = '';
-                    emptyState.style.display = 'block';
+                    paletteContainer.innerHTML = `
+                        <h2>Saved Palettes</h2>
+                        <div class="empty-state">
+                            <h3>No saved palettes yet</h3>
+                            <p>Create and save your first color palette above</p>
+                        </div>
+                    `;
                     return;
                 }
                 
-                emptyState.style.display = 'none';
-                grid.innerHTML = '';
+                const sortedPalettes = palettes.sort((a, b) => new Date(b.value.createdAt) - new Date(a.value.createdAt));
                 
-                palettes.forEach(({key, value: palette}) => {
-                    const paletteEl = document.createElement('div');
-                    paletteEl.className = 'palette';
-                    
-                    const colorsHtml = palette.colors.map(color => `
-                        <div style="display: flex; flex-direction: column; align-items: center;">
-                            <div class="color-swatch" style="background-color: ${color}" onclick="copyToClipboard('${color}')"></div>
-                            <div class="color-code">${color}</div>
+                paletteContainer.innerHTML = `
+                    <h2>Saved Palettes</h2>
+                    ${sortedPalettes.map(item => `
+                        <div class="palette-item">
+                            <div class="palette-preview">
+                                ${item.value.colors.map(color => `<div class="palette-color" style="background-color: ${color}"></div>`).join('')}
+                            </div>
+                            <div class="palette-info">
+                                <div>
+                                    <div class="palette-name">${item.value.name}</div>
+                                    <div class="palette-date">${new Date(item.value.createdAt).toLocaleDateString()}</div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button class="btn btn-small" onclick="loadPalette('${item.key}')">Load</button>
+                                    <button class="btn btn-small" onclick="deletePalette('${item.key}')">Delete</button>
+                                </div>
+                            </div>
                         </div>
-                    `).join('');
-                    
-                    paletteEl.innerHTML = `
-                        <div class="palette-name">${palette.name}</div>
-                        <div class="colors-row">${colorsHtml}</div>
-                        <div class="palette-actions">
-                            <button class="btn btn-small secondary" onclick="loadPalette(${JSON.stringify(palette.colors).replace(/"/g, '&quot;')})">Load</button>
-                            <button class="btn btn-small secondary" onclick="copyToClipboard('${palette.colors.join(', ')}')">Copy</button>
-                            <button class="btn btn-small secondary" onclick="deletePalette('${key}')">Delete</button>
-                        </div>
-                    `;
-                    
-                    grid.appendChild(paletteEl);
-                });
+                    `).join('')}
+                `;
             } catch (error) {
-                showToast('Failed to load palettes', true);
+                console.error('Failed to load palettes:', error);
             }
         }
 
-        // Initialize app
-        window.addEventListener('load', async () => {
-            setTimeout(() => {
-                document.getElementById('loader').classList.add('hidden');
-            }, 1000);
+        async function loadPalette(key) {
+            try {
+                const palette = await db.get(key);
+                if (palette) {
+                    currentPalette = [...palette.colors];
+                    renderPalette();
+                    showToast('Palette loaded!', 'success');
+                }
+            } catch (error) {
+                showToast('Failed to load palette', 'error');
+            }
+        }
+
+        async function deletePalette(key) {
+            if (confirm('Are you sure you want to delete this palette?')) {
+                try {
+                    await db.delete(key);
+                    await loadSavedPalettes();
+                    showToast('Palette deleted', 'success');
+                } catch (error) {
+                    showToast('Failed to delete palette', 'error');
+                }
+            }
+        }
+
+        function exportPalette() {
+            if (currentPalette.length === 0) {
+                showToast('Add some colors first', 'error');
+                return;
+            }
             
-            updateCurrentPalette();
-            await loadSavedPalettes();
-        });
+            const css = `:root {
+${currentPalette.map((color, index) => `  --color-${index + 1}: ${color};`).join('\n')}
+}
+
+/* Usage examples */
+.primary { background-color: var(--color-1); }
+.secondary { background-color: var(--color-2); }
+.accent { background-color: var(--color-3); }
+.highlight { background-color: var(--color-4); }`;
+
+            navigator.clipboard.writeText(css).then(() => {
+                showToast('CSS variables copied to clipboard!', 'success');
+            }).catch(() => {
+                showToast('Failed to copy CSS', 'error');
+            });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -711,9 +781,31 @@ const db = new SingularityDB(SINGULARITY_DB_NS);
                         e.preventDefault();
                         generateRandomPalette();
                         break;
+                    case 'e':
+                        e.preventDefault();
+                        exportPalette();
+                        break;
                 }
             }
         });
+
+        // Touch support for color previews
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.classList.contains('color-preview')) {
+                e.preventDefault();
+                const color = e.target.style.backgroundColor;
+                const hex = rgbToHex(color);
+                if (hex) copyColor(hex);
+            }
+        });
+
+        function rgbToHex(rgb) {
+            const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (!match) return null;
+            
+            const hex = (x) => ("0" + parseInt(x).toString(16)).slice(-2);
+            return "#" + hex(match[1]) + hex(match[2]) + hex(match[3]);
+        }
     </script>
 </body>
 </html>
