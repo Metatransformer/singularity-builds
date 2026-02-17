@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "MrFlyHigher1-comedy-survival-game-wher-243602";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Last Braincell Standing</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --accent: #00d4ff;
+            --text: #e0e0e0;
+            --muted: #888;
+            --danger: #ff4444;
+            --success: #44ff44;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            animation: fadeOut 1s ease-out 2s forwards;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; pointer-events: none; }
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(ellipse at center, #1a0d2e 0%, #16051f 50%, var(--bg) 100%);
+            overflow: hidden;
+        }
+
+        .hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            font-size: clamp(14px, 4vw, 18px);
+        }
+
+        .score {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 2px solid var(--accent);
+            backdrop-filter: blur(10px);
+        }
+
+        .health {
+            display: flex;
+            gap: 5px;
+        }
+
+        .health-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success);
+            transition: background 0.3s ease;
+        }
+
+        .health-dot.lost {
+            background: #333;
+        }
+
+        .braincell {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 20px var(--accent);
+            z-index: 50;
+            transition: transform 0.1s ease;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px var(--accent); }
+            50% { box-shadow: 0 0 40px var(--accent); }
+        }
+
+        .distraction, .thought, .focus-point {
+            position: absolute;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+        }
+
+        .distraction {
+            width: 40px;
+            height: 40px;
+            background: var(--danger);
+            box-shadow: 0 0 15px var(--danger);
+        }
+
+        .thought {
+            width: 50px;
+            height: 50px;
+            background: #ff6b00;
+            box-shadow: 0 0 20px #ff6b00;
+            animation: throb 1.5s ease-in-out infinite;
+        }
+
+        @keyframes throb {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .focus-point {
+            width: 20px;
+            height: 20px;
+            background: var(--success);
+            box-shadow: 0 0 15px var(--success);
+            animation: sparkle 1s ease-in-out infinite;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        .menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            display: grid;
+            place-items: center;
+            z-index: 200;
+            text-align: center;
+        }
+
+        .menu-content {
+            max-width: 500px;
+            padding: 40px 20px;
+        }
+
+        .menu h1 {
+            font-size: clamp(24px, 6vw, 36px);
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+
+        .menu p {
+            color: var(--muted);
+            margin-bottom: 30px;
+            font-size: clamp(14px, 3vw, 16px);
+            line-height: 1.5;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: clamp(14px, 3vw, 16px);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .controls {
+            margin-top: 20px;
+            font-size: clamp(12px, 2.5vw, 14px);
+            color: var(--muted);
+        }
+
+        .leaderboard {
+            margin-top: 30px;
+        }
+
+        .leaderboard h3 {
+            color: var(--accent);
+            margin-bottom: 15px;
+        }
+
+        .score-entry {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .game-over-stats {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">
+        <div>
+            <div class="spinner"></div>
+            <p style="margin-top: 20px; color: var(--muted);">Initializing last braincell...</p>
+        </div>
+    </div>
+
+    <div class="game-container" id="gameContainer">
+        <div class="hud">
+            <div class="score">
+                Focus: <span id="score">0</span>
+            </div>
+            <div class="health" id="health">
+                <div class="health-dot"></div>
+                <div class="health-dot"></div>
+                <div class="health-dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="menu" id="startMenu">
+        <div class="menu-content">
+            <h1>🧠 Last Braincell Standing</h1>
+            <p>You're the final functioning neuron at the world's most chaotic party inside someone's head. Dodge distractions, avoid intrusive thoughts, and collect focus points to survive!</p>
+            <button class="btn" onclick="startGame()">Start Surviving</button>
+            <div class="controls">
+                <p><strong>Controls:</strong></p>
+                <p>🖱️ Mouse/Touch to move • WASD/Arrow keys also work</p>
+            </div>
+            <div class="leaderboard" id="leaderboard"></div>
+        </div>
+    </div>
+
+    <div class="menu" id="gameOverMenu" style="display: none;">
+        <div class="menu-content">
+            <h1>💀 Braincell Overloaded!</h1>
+            <div class="game-over-stats" id="gameOverStats"></div>
+            <button class="btn" onclick="startGame()">Try Again</button>
+            <button class="btn" onclick="showStartMenu()" style="background: #333; color: var(--text);">Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            player: { x: 400, y: 300, size: 30 },
+            score: 0,
+            health: 3,
+            entities: [],
+            gameRunning: false,
+            keys: {},
+            mouse: { x: 400, y: 300 },
+            lastSpawn: 0,
+            difficulty: 1
+        };
+
+        let gameLoop;
+        let audioContext;
+
+        // Initialize audio
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(freq, duration, type = 'sine') {
+            if (!audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        // Input handling
+        document.addEventListener('keydown', (e) => {
+            gameState.keys[e.code] = true;
+            if (gameState.gameRunning && (e.code === 'Space' || e.code === 'Enter')) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            gameState.keys[e.code] = false;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            gameState.mouse.x = e.clientX;
+            gameState.mouse.y = e.clientY;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            gameState.mouse.x = touch.clientX;
+            gameState.mouse.y = touch.clientY;
+        }, { passive: false });
+
+        function updatePlayer() {
+            const speed = 5;
+            let targetX = gameState.mouse.x - gameState.player.size / 2;
+            let targetY = gameState.mouse.y - gameState.player.size / 2;
+
+            // Keyboard controls
+            if (gameState.keys['ArrowLeft'] || gameState.keys['KeyA']) targetX = gameState.player.x - speed;
+            if (gameState.keys['ArrowRight'] || gameState.keys['KeyD']) targetX = gameState.player.x + speed;
+            if (gameState.keys['ArrowUp'] || gameState.keys['KeyW']) targetY = gameState.player.y - speed;
+            if (gameState.keys['ArrowDown'] || gameState.keys['KeyS']) targetY = gameState.player.y + speed;
+
+            // Smooth movement
+            gameState.player.x += (targetX - gameState.player.x) * 0.1;
+            gameState.player.y += (targetY - gameState.player.y) * 0.1;
+
+            // Keep in bounds
+            gameState.player.x = Math.max(0, Math.min(window.innerWidth - gameState.player.size, gameState.player.x));
+            gameState.player.y = Math.max(0, Math.min(window.innerHeight - gameState.player.size, gameState.player.y));
+        }
+
+        function spawnEntity() {
+            const now = Date.now();
+            if (now - gameState.lastSpawn < 1000 / gameState.difficulty) return;
+
+            gameState.lastSpawn = now;
+            const side = Math.floor(Math.random() * 4);
+            let x, y, vx, vy;
+
+            switch (side) {
+                case 0: // top
+                    x = Math.random() * window.innerWidth;
+                    y = -50;
+                    vx = (Math.random() - 0.5) * 2;
+                    vy = 1 + Math.random() * 2;
+                    break;
+                case 1: // right
+                    x = window.innerWidth + 50;
+                    y = Math.random() * window.innerHeight;
+                    vx = -1 - Math.random() * 2;
+                    vy = (Math.random() - 0.5) * 2;
+                    break;
+                case 2: // bottom
+                    x = Math.random() * window.innerWidth;
+                    y = window.innerHeight + 50;
+                    vx = (Math.random() - 0.5) * 2;
+                    vy = -1 - Math.random() * 2;
+                    break;
+                case 3: // left
+                    x = -50;
+                    y = Math.random() * window.innerHeight;
+                    vx = 1 + Math.random() * 2;
+                    vy = (Math.random() - 0.5) * 2;
+                    break;
+            }
+
+            const rand = Math.random();
+            let type;
+            if (rand < 0.1) {
+                type = 'focus';
+            } else if (rand < 0.4) {
+                type = 'thought';
+            } else {
+                type = 'distraction';
+            }
+
+            gameState.entities.push({ x, y, vx, vy, type });
+        }
+
+        function updateEntities() {
+            gameState.entities = gameState.entities.filter(entity => {
+                entity.x += entity.vx * gameState.difficulty;
+                entity.y += entity.vy * gameState.difficulty;
+
+                // Remove off-screen entities
+                if (entity.x < -100 || entity.x > window.innerWidth + 100 ||
+                    entity.y < -100 || entity.y > window.innerHeight + 100) {
+                    return false;
+                }
+
+                // Check collision with player
+                const dx = entity.x - gameState.player.x - gameState.player.size / 2;
+                const dy = entity.y - gameState.player.y - gameState.player.size / 2;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < (entity.type === 'focus' ? 30 : 35)) {
+                    if (entity.type === 'focus') {
+                        gameState.score += 10;
+                        playSound(800, 0.2, 'sine');
+                    } else {
+                        gameState.health--;
+                        playSound(200, 0.5, 'sawtooth');
+                        if (gameState.health <= 0) {
+                            endGame();
+                        }
+                    }
+                    return false;
+                }
+
+                return true;
+            });
+        }
+
+        function render() {
+            const container = document.getElementById('gameContainer');
+            
+            // Clear existing entities
+            container.querySelectorAll('.distraction, .thought, .focus-point, .braincell').forEach(el => el.remove());
+
+            // Render player
+            const player = document.createElement('div');
+            player.className = 'braincell';
+            player.style.left = gameState.player.x + 'px';
+            player.style.top = gameState.player.y + 'px';
+            container.appendChild(player);
+
+            // Render entities
+            gameState.entities.forEach(entity => {
+                const el = document.createElement('div');
+                el.className = entity.type === 'focus' ? 'focus-point' : 
+                              entity.type === 'thought' ? 'thought' : 'distraction';
+                el.style.left = entity.x + 'px';
+                el.style.top = entity.y + 'px';
+                container.appendChild(el);
+            });
+
+            // Update HUD
+            document.getElementById('score').textContent = gameState.score;
+            const healthDots = document.querySelectorAll('.health-dot');
+            healthDots.forEach((dot, i) => {
+                dot.classList.toggle('lost', i >= gameState.health);
+            });
+        }
+
+        function gameUpdate() {
+            if (!gameState.gameRunning) return;
+
+            updatePlayer();
+            spawnEntity();
+            updateEntities();
+            render();
+
+            // Increase difficulty
+            gameState.difficulty = 1 + gameState.score / 200;
+
+            gameLoop = requestAnimationFrame(gameUpdate);
+        }
+
+        async function startGame() {
+            initAudio();
+            
+            gameState = {
+                player: { x: window.innerWidth / 2, y: window.innerHeight / 2, size: 30 },
+                score: 0,
+                health: 3,
+                entities: [],
+                gameRunning: true,
+                keys: {},
+                mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+                lastSpawn: 0,
+                difficulty: 1
+            };
+
+            document.getElementById('startMenu').style.display = 'none';
+            document.getElementById('gameOverMenu').style.display = 'none';
+
+            gameUpdate();
+        }
+
+        async function endGame() {
+            gameState.gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+
+            // Save high score
+            try {
+                const scores = await db.get('highscores') || [];
+                const newScore = {
+                    score: gameState.score,
+                    date: new Date().toLocaleDateString()
+                };
+                scores.push(newScore);
+                scores.sort((a, b) => b.score - a.score);
+                scores.splice(10); // Keep top 10
+                await db.set('highscores', scores);
+            } catch (e) {
+                console.log('Could not save score');
+            }
+
+            document.getElementById('gameOverStats').innerHTML = `
+                <h3>Final Stats</h3>
+                <p>Focus Points Collected: <strong>${gameState.score}</strong></p>
+                <p>Difficulty Reached: <strong>${gameState.difficulty.toFixed(1)}x</strong></p>
+            `;
+
+            document.getElementById('gameOverMenu').style.display = 'grid';
+        }
+
+        function showStartMenu() {
+            document.getElementById('gameOverMenu').style.display = 'none';
+            document.getElementById('startMenu').style.display = 'grid';
+        }
+
+        async function loadLeaderboard() {
+            try {
+                const scores = await db.get('highscores') || [];
+                const leaderboard = document.getElementById('leaderboard');
+                
+                if (scores.length === 0) {
+                    leaderboard.innerHTML = '<div class="leaderboard"><h3>🏆 High Scores</h3><p style="color: var(--muted);">No scores yet. Be the first!</p></div>';
+                    return;
+                }
+
+                leaderboard.innerHTML = `
+                    <div class="leaderboard">
+                        <h3>🏆 High Scores</h3>
+                        ${scores.slice(0, 5).map((score, i) => `
+                            <div class="score-entry">
+                                <span>#${i + 1}</span>
+                                <span>${score.score} focus</span>
+                                <span>${score.date}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('leaderboard').innerHTML = '<div class="leaderboard"><h3>🏆 High Scores</h3><p style="color: var(--muted);">Loading scores...</p></div>';
+            }
+        }
+
+        async function init() {
+            await loadLeaderboard();
+        }
+
+        // Start the app
+        init();
+    </script>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+</body>
+</html>
