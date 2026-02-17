@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "blazeonecrypto-agent-named-genesis-vault-789943";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genesis Vault - Autonomous Crypto Portfolio AI</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-accent: #2a2a2a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            --accent: #00d4ff;
+            --accent-dark: #0099cc;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --danger: #ff4444;
+            --border: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            opacity: 0;
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-accent));
+            border-radius: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, var(--accent), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-accent);
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            border: 1px solid var(--border);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-accent));
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.1);
+            border-color: var(--accent);
+        }
+
+        .card h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            font-size: 1.2em;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .positive { color: var(--success); }
+        .negative { color: var(--danger); }
+        .neutral { color: var(--warning); }
+
+        .setup-section {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-accent));
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+        }
+
+        .setup-section h2 {
+            color: var(--accent);
+            font-size: 1.6rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .setup-steps {
+            list-style: none;
+            counter-reset: step;
+        }
+
+        .setup-steps li {
+            counter-increment: step;
+            margin-bottom: 15px;
+            padding-left: 40px;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        .setup-steps li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 25px;
+            height: 25px;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .api-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            padding: 12px 15px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, var(--accent), var(--accent-dark));
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .alert.info {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            color: var(--accent);
+        }
+
+        .alert.warning {
+            background: rgba(255, 170, 0, 0.1);
+            border: 1px solid rgba(255, 170, 0, 0.3);
+            color: var(--warning);
+        }
+
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .token-card {
+            background: var(--bg-accent);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid var(--border);
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .token-card:hover {
+            border-color: var(--accent);
+            transform: scale(1.02);
+        }
+
+        .token-symbol {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .token-allocation {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .token-change {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 15px;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .api-form {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+        <p>Initializing Genesis Vault...</p>
+    </div>
+
+    <div class="main-container" id="mainContainer">
+        <div class="header">
+            <h1>🧬 Genesis Vault</h1>
+            <p>Autonomous AI Portfolio Optimization & Opportunity Detection</p>
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                <span id="statusText">System Initializing</span>
+            </div>
+        </div>
+
+        <div class="setup-section" id="setupSection">
+            <h2>🔧 Setup & Configuration</h2>
+            <p style="margin-bottom: 20px; color: var(--text-secondary);">Configure your API connections to enable autonomous analysis:</p>
+            
+            <form class="api-form" id="apiForm">
+                <div class="form-group">
+                    <label for="dexScreenerApi">DexScreener API Key</label>
+                    <input type="password" id="dexScreenerApi" placeholder="Enter DexScreener API key">
+                </div>
+                <div class="form-group">
+                    <label for="rpcEndpoint">RPC Endpoint URL</label>
+                    <input type="url" id="rpcEndpoint" placeholder="https://mainnet.infura.io/v3/YOUR_KEY">
+                </div>
+                <div class="form-group">
+                    <label for="walletAddress">Portfolio Wallet Address</label>
+                    <input type="text" id="walletAddress" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="riskTolerance">Risk Tolerance (1-10)</label>
+                    <input type="number" id="riskTolerance" min="1" max="10" value="5">
+                </div>
+            </form>
+            
+            <button class="btn" onclick="saveConfiguration()">
+                💾 Save Configuration
+            </button>
+
+            <div class="alert info">
+                <strong>🚀 Quick Setup:</strong> Genesis Vault simulates real-time analysis using mock data. In production, connect your DexScreener API, RPC endpoint, and wallet for live portfolio optimization.
+            </div>
+
+            <h3 style="color: var(--accent); margin: 30px 0 15px 0;">📋 Initialization Steps:</h3>
+            <ol class="setup-steps">
+                <li><strong>API Configuration:</strong> Enter your DexScreener API key for real-time token data</li>
+                <li><strong>Blockchain Connection:</strong> Configure RPC endpoint for on-chain liquidity analysis</li>
+                <li><strong>Portfolio Setup:</strong> Add your wallet address for portfolio tracking</li>
+                <li><strong>Risk Parameters:</strong> Set your risk tolerance and allocation preferences</li>
+                <li><strong>Strategy Activation:</strong> Enable autonomous monitoring and rebalancing</li>
+            </ol>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3><span class="icon">📊</span>Market Analysis</h3>
+                <div class="metric">
+                    <span class="metric-label">Active Pairs Monitored</span>
+                    <span class="metric-value" id="activePairs">247</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">High Momentum Tokens</span>
+                    <span class="metric-value positive" id="momentumTokens">12</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Liquidity Threshold</span>
+                    <span class="metric-value" id="liquidityThreshold">$50K</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Analysis Frequency</span>
+                    <span class="metric-value neutral">5 min</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><span class="icon">🎯</span>Portfolio Health</h3>
+                <div class="metric">
+                    <span class="metric-label">Total Value Locked</span>
+                    <span class="metric-value" id="totalValue">$12,847</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">24h Performance</span>
+                    <span class="metric-value positive" id="performance24h">+2.34%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Risk Score</span>
+                    <span class="metric-value neutral" id="riskScore">6.2/10</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Rebalance Status</span>
+                    <span class="metric-value positive">Optimized</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><span class="icon">🔍</span>Opportunity Scanner</h3>
+                <div class="metric">
+                    <span class="metric-label">New Opportunities</span>
+                    <span class="metric-value positive" id="newOpportunities">3</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Volume Spike Alerts</span>
+                    <span class="metric-value warning" id="volumeSpikes">7</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Liquidity Events</span>
+                    <span class="metric-value" id="liquidityEvents">2</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Success Rate</span>
+                    <span class="metric-value positive">78.5%</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><span class="icon">⚡</span>Autonomous Actions</h3>
+                <div class="metric">
+                    <span class="metric-label">Auto-Rebalances (24h)</span>
+                    <span class="metric-value" id="autoRebalances">2</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Stop-Loss Triggers</span>
+                    <span class="metric-value" id="stopLosses">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Profit Taking</span>
+                    <span class="metric-value positive" id="profitTaking">1</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Next Analysis</span>
+                    <span class="metric-value" id="nextAnalysis">4:32</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3><span class="icon">💼</span>Current Portfolio Allocation</h3>
+            <div class="portfolio-grid" id="portfolioGrid">
+                <!-- Portfolio tokens will be populated here -->
+            </div>
+        </div>
+
+        <div class="card">
+            <h3><span class="icon">📈</span>Recent AI Decisions</h3>
+            <div id="recentDecisions">
+                <!-- Recent decisions will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        // Genesis Vault - Autonomous Crypto Portfolio AI
+        let config = {};
+        let portfolioData = [];
+        let marketData = {};
+        let isConfigured = false;
+
+        // Initialize app
+        async function init() {
+            try {
+                // Load configuration
+                config = await db.get("genesis_config") || {};
+                portfolioData = await db.get("portfolio_data") || [];
+                marketData = await db.get("market_data") || {};
+
+                // Check if configured
+                isConfigured = config.dexScreenerApi && config.rpcEndpoint;
+
+                if (isConfigured) {
+                    document.getElementById("setupSection").style.display = "none";
+                    document.getElementById("statusText").textContent = "System Active";
+                    populateFormData();
+                } else {
+                    document.getElementById("statusText").textContent = "Configuration Required";
+                }
+
+                // Generate initial portfolio data if empty
+                if (portfolioData.length === 0) {
+                    portfolioData = generateMockPortfolio();
+                    await db.set("portfolio_data", portfolioData);
+                }
+
+                // Start real-time updates
+                startRealTimeUpdates();
+                renderPortfolio();
+                renderRecentDecisions();
+
+                // Hide loader
+                setTimeout(() => {
+                    document.getElementById("loader").classList.add("hidden");
+                }, 1500);
+
+            } catch (error) {
+                console.error("Initialization failed:", error);
+                document.getElementById("statusText").textContent = "System Error";
+            }
+        }
+
+        // Save API configuration
+        async function saveConfiguration() {
+            try {
+                const newConfig = {
+                    dexScreenerApi: document.getElementById("dexScreenerApi").value,
+                    rpcEndpoint: document.getElementById("rpcEndpoint").value,
+                    walletAddress: document.getElementById("walletAddress").value,
+                    riskTolerance: parseInt(document.getElementById("riskTolerance").value),
+                    configuredAt: new Date().toISOString()
+                };
+
+                await db.set("genesis_config", newConfig);
+                config = newConfig;
+                isConfigured = true;
+
+                document.getElementById("setupSection").style.display = "none";
+                document.getElementById("statusText").textContent = "System Active";
+
+                // Show success message
+                showNotification("Configuration saved! Genesis Vault is now active.", "success");
+
+                // Initialize autonomous monitoring
+                initializeAutonomousSystem();
+
+            } catch (error) {
+                console.error("Configuration save failed:", error);
+                showNotification("Failed to save configuration", "error");
+            }
+        }
+
+        // Populate form with saved data
+        function populateFormData() {
+            if (config.dexScreenerApi) {
+                document.getElementById("dexScreenerApi").value = config.dexScreenerApi;
+            }
+            if (config.rpcEndpoint) {
+                document.getElementById("rpcEndpoint").value = config.rpcEndpoint;
+            }
+            if (config.walletAddress) {
+                document.getElementById("walletAddress").value = config.walletAddress;
+            }
+            if (config.riskTolerance) {
+                document.getElementById("riskTolerance").value = config.riskTolerance;
+            }
+        }
+
+        // Generate mock portfolio data
+        function generateMockPortfolio() {
+            const tokens = [
+                { symbol: "ETH", allocation: 35, price: 2847.32, change24h: 2.34 },
+                { symbol: "BTC", allocation: 25, price: 67432.18, change24h: 1.87 },
+                { symbol: "LINK", allocation: 15, price: 18.76, change24h: 4.21 },
+                { symbol: "UNI", allocation: 10, price: 8.94, change24h: -1.23 },
+                { symbol: "AAVE", allocation: 8, price: 156.78, change24h: 3.45 },
+                { symbol: "MATIC", allocation: 7, price: 0.87, change24h: 2.11 }
+            ];
+
+            return tokens.map(token => ({
+                ...token,
+                id: Date.now() + Math.random(),
+                lastUpdated: new Date().toISOString()
+            }));
+        }
+
+        // Render portfolio allocation
+        function renderPortfolio() {
+            const grid = document.getElementById("portfolioGrid");
+            
+            if (portfolioData.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="icon">💼</div>
+                        <p>No portfolio data available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = portfolioData.map(token => `
+                <div class="token-card">
+                    <div class="token-symbol">${token.symbol}</div>
+                    <div class="token-allocation">${token.allocation}%</div>
+                    <div class="token-change ${token.change24h >= 0 ? 'positive' : 'negative'}">
+                        ${token.change24h >= 0 ? '+' : ''}${token.change24h.toFixed(2)}%
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render recent AI decisions
+        function renderRecentDecisions() {
+            const decisions = [
+                { time: "2 min ago", action: "Rebalanced ETH allocation", type: "rebalance", impact: "+0.3%" },
+                { time: "15 min ago", action: "Detected LINK momentum spike", type: "opportunity", impact: "High potential" },
+                { time: "1 hour ago", action: "Reduced UNI exposure", type: "risk", impact: "Risk mitigation" },
+                { time: "3 hours ago", action: "Added AAVE to watchlist", type: "analysis", impact: "Monitoring" }
+            ];
+
+            const container = document.getElementById("recentDecisions");
+            container.innerHTML = decisions.map(decision => `
+                <div class="metric">
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">${decision.action}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">${decision.time}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="metric-value ${decision.type === 'opportunity' ? 'positive' : decision.type === 'risk' ? 'warning' : 'neutral'}">
+                            ${decision.impact}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Start real-time updates
+        function startRealTimeUpdates() {
+            // Update metrics every 30 seconds
+            setInterval(updateMetrics, 30000);
+            
+            // Update portfolio data every 2 minutes
+            setInterval(updatePortfolioData, 120000);
+
+            // Update countdown timer
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        }
+
+        // Update dynamic metrics
+        function updateMetrics() {
+            // Simulate real-time data changes
+            const activePairs = 240 + Math.floor(Math.random() * 20);
+            const momentumTokens = 8 + Math.floor(Math.random() * 10);
+            const newOpportunities = Math.floor(Math.random() * 6);
+            const volumeSpikes = Math.floor(Math.random() * 12);
+
+            document.getElementById("activePairs").textContent = activePairs;
+            document.getElementById("momentumTokens").textContent = momentumTokens;
+            document.getElementById("newOpportunities").textContent = newOpportunities;
+            document.getElementById("volumeSpikes").textContent = volumeSpikes;
+
+            // Update portfolio performance
+            const performance = (Math.random() - 0.5) * 6; // -3% to +3%
+            const perfElement = document.getElementById("performance24h");
+            perfElement.textContent = `${performance >= 0 ? '+' : ''}${performance.toFixed(2)}%`;
+            perfElement.className = `metric-value ${performance >= 0 ? 'positive' : 'negative'}`;
+
+            // Update total value
+            const baseValue = 12847;
+            const newValue = baseValue * (1 + performance / 100);
+            document.getElementById("totalValue").textContent = `$${newValue.toLocaleString()}`;
+        }
+
+        // Update portfolio data
+        async function updatePortfolioData() {
+            try {
+                // Simulate price changes
+                portfolioData = portfolioData.map(token => ({
+                    ...token,
+                    change24h: (Math.random() - 0.5) * 8, // -4% to +4%
+                    lastUpdated: new Date().toISOString()
+                }));
+
+                await db.set("portfolio_data", portfolioData);
+                renderPortfolio();
+            } catch (error) {
+                console.error("Portfolio update failed:", error);
+            }
+        }
+
+        // Update countdown timer
+        function updateCountdown() {
+            const minutes = Math.floor(Math.random() * 5);
+            const seconds = Math.floor(Math.random() * 60);
+            document.getElementById("nextAnalysis").textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Initialize autonomous system
+        function initializeAutonomousSystem() {
+            console.log("Genesis Vault autonomous system activated");
+            
+            // Simulate autonomous actions
+            setTimeout(() => {
+                const actions = Math.floor(Math.random() * 4);
+                document.getElementById("autoRebalances").textContent = actions;
+            }, 5000);
+        }
+
+        // Show notification
+        function showNotification(message, type) {
+            const notification = document.createElement("div");
+            notification.className = `alert ${type}`;
+            notification.textContent = message;
+            
+            document.querySelector(".main-container").insertBefore(
+                notification, 
+                document.querySelector(".grid")
+            );
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+
+        // Initialize app on load
+        init();
+    </script>
+</body>
+</html>
