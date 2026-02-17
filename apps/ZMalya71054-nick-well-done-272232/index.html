@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "ZMalya71054-nick-well-done-272232";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nick! Well Done 🎉</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --accent: #00d4ff;
+            --text-light: #e0e0e0;
+            --text-muted: #888;
+            --success: #00ff88;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            overflow-x: hidden;
+        }
+
+        .loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-dark);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 212, 255, 0.2);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        .celebration {
+            position: relative;
+            background: linear-gradient(135deg, var(--card-bg), rgba(0, 212, 255, 0.1));
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            animation: fadeInUp 0.6s ease;
+            overflow: hidden;
+        }
+
+        .celebration::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 212, 255, 0.1), transparent);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: translateX(-100%) rotate(45deg); }
+            50% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .main-title {
+            font-size: clamp(2.5rem, 8vw, 4rem);
+            font-weight: 800;
+            background: linear-gradient(45deg, var(--accent), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .subtitle {
+            font-size: clamp(1.2rem, 4vw, 1.5rem);
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .achievements {
+            display: grid;
+            gap: 1rem;
+            margin: 2rem 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .achievement {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .achievement:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .achievement-icon {
+            font-size: 2rem;
+            width: 50px;
+            height: 50px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--accent), var(--success));
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .achievement-text {
+            text-align: left;
+            flex-grow: 1;
+        }
+
+        .achievement-title {
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 0.25rem;
+        }
+
+        .achievement-desc {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .add-achievement {
+            background: linear-gradient(135deg, var(--accent), var(--success));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 1rem 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .add-achievement:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .add-form {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .add-form.visible {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .empty-state {
+            color: var(--text-muted);
+            font-style: italic;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .confetti {
+            position: absolute;
+            pointer-events: none;
+            animation: confettiFall 3s ease-out infinite;
+        }
+
+        @keyframes confettiFall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+
+        @media (max-width: 640px) {
+            .container { padding: 1rem; }
+            .celebration { padding: 2rem 1rem; }
+            .achievement { flex-direction: column; text-align: center; }
+            .achievement-text { text-align: center; }
+            .form-actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <div class="celebration">
+            <h1 class="main-title">Nick! Well Done 🎉</h1>
+            <p class="subtitle">Celebrating your awesome achievements</p>
+            
+            <div class="achievements" id="achievements">
+                <!-- Achievements will be loaded here -->
+            </div>
+            
+            <button class="add-achievement" onclick="toggleAddForm()">
+                ➕ Add New Achievement
+            </button>
+            
+            <div class="add-form" id="addForm">
+                <div class="form-group">
+                    <label for="achievementTitle">Achievement Title</label>
+                    <input type="text" id="achievementTitle" placeholder="What did you accomplish?">
+                </div>
+                
+                <div class="form-group">
+                    <label for="achievementDesc">Description</label>
+                    <textarea id="achievementDesc" rows="3" placeholder="Tell us more about this achievement..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="achievementIcon">Icon (emoji)</label>
+                    <input type="text" id="achievementIcon" placeholder="🏆" maxlength="2">
+                </div>
+                
+                <div class="form-actions">
+                    <button class="btn btn-secondary" onclick="cancelAdd()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveAchievement()">Save Achievement</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let achievements = [];
+
+        async function init() {
+            try {
+                achievements = await db.get("achievements") || [
+                    {
+                        id: 1,
+                        title: "First Achievement Unlocked!",
+                        description: "Welcome to your personal achievement tracker",
+                        icon: "🌟",
+                        date: new Date().toLocaleDateString()
+                    }
+                ];
+                renderAchievements();
+                createConfetti();
+            } catch (error) {
+                console.error("Error loading achievements:", error);
+                achievements = [];
+                renderAchievements();
+            }
+            
+            // Hide loader
+            setTimeout(() => {
+                document.getElementById("loader").classList.add("hidden");
+            }, 800);
+        }
+
+        function renderAchievements() {
+            const container = document.getElementById("achievements");
+            
+            if (achievements.length === 0) {
+                container.innerHTML = '<div class="empty-state">No achievements yet. Add your first one!</div>';
+                return;
+            }
+            
+            container.innerHTML = achievements.map(achievement => `
+                <div class="achievement" onclick="celebrateAchievement('${achievement.icon}')">
+                    <div class="achievement-icon">${achievement.icon}</div>
+                    <div class="achievement-text">
+                        <div class="achievement-title">${achievement.title}</div>
+                        <div class="achievement-desc">${achievement.description}</div>
+                        <div class="achievement-desc" style="margin-top:0.25rem;font-size:0.8rem;opacity:0.7">${achievement.date}</div>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function toggleAddForm() {
+            const form = document.getElementById("addForm");
+            form.classList.toggle("visible");
+            if (form.classList.contains("visible")) {
+                document.getElementById("achievementTitle").focus();
+            }
+        }
+
+        function cancelAdd() {
+            document.getElementById("addForm").classList.remove("visible");
+            clearForm();
+        }
+
+        function clearForm() {
+            document.getElementById("achievementTitle").value = "";
+            document.getElementById("achievementDesc").value = "";
+            document.getElementById("achievementIcon").value = "";
+        }
+
+        async function saveAchievement() {
+            const title = document.getElementById("achievementTitle").value.trim();
+            const description = document.getElementById("achievementDesc").value.trim();
+            const icon = document.getElementById("achievementIcon").value.trim() || "🎯";
+            
+            if (!title) {
+                alert("Please enter an achievement title!");
+                return;
+            }
+            
+            const newAchievement = {
+                id: Date.now(),
+                title,
+                description: description || "Another great accomplishment!",
+                icon,
+                date: new Date().toLocaleDateString()
+            };
+            
+            achievements.unshift(newAchievement);
+            
+            try {
+                await db.set("achievements", achievements);
+                renderAchievements();
+                cancelAdd();
+                celebrateAchievement(icon);
+            } catch (error) {
+                console.error("Error saving achievement:", error);
+                alert("Error saving achievement. Please try again.");
+            }
+        }
+
+        function celebrateAchievement(emoji) {
+            // Create celebration confetti
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement("div");
+                    confetti.className = "confetti";
+                    confetti.style.left = Math.random() * 100 + "vw";
+                    confetti.style.animationDelay = Math.random() * 2 + "s";
+                    confetti.style.fontSize = Math.random() * 20 + 20 + "px";
+                    confetti.textContent = Math.random() > 0.5 ? emoji : ["🎉", "⭐", "🏆", "🎊", "✨"][Math.floor(Math.random() * 5)];
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 100);
+            }
+        }
+
+        function createConfetti() {
+            // Initial celebration
+            setTimeout(() => {
+                for (let i = 0; i < 15; i++) {
+                    setTimeout(() => {
+                        const confetti = document.createElement("div");
+                        confetti.className = "confetti";
+                        confetti.style.left = Math.random() * 100 + "vw";
+                        confetti.style.animationDelay = Math.random() * 2 + "s";
+                        confetti.style.fontSize = Math.random() * 15 + 15 + "px";
+                        confetti.textContent = ["🎉", "🌟", "🏆", "⭐", "✨", "🎊"][Math.floor(Math.random() * 6)];
+                        document.body.appendChild(confetti);
+                        
+                        setTimeout(() => confetti.remove(), 3000);
+                    }, i * 150);
+                }
+            }, 1000);
+        }
+
+        // Handle Enter key in form
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && document.getElementById("addForm").classList.contains("visible")) {
+                if (e.target.id !== "achievementDesc") {
+                    e.preventDefault();
+                    saveAchievement();
+                }
+            }
+            if (e.key === "Escape") {
+                cancelAdd();
+            }
+        });
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
