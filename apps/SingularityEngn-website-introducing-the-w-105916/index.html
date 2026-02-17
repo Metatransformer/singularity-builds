@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "SingularityEngn-website-introducing-the-w-105916";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SingularityEngn - The Evolution Continues</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --accent: #00d4ff;
+            --text-primary: #e0e0e0;
+            --text-muted: #888;
+            --gradient: linear-gradient(135deg, #00d4ff, #0080ff, #6b46c1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .loading {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 212, 255, 0.1);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .hero {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 212, 255, 0.1), transparent 70%);
+            animation: pulse 4s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { opacity: 0.3; transform: scale(0.8); }
+            to { opacity: 0.6; transform: scale(1.2); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 900;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .tagline {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+
+        .cta-section {
+            margin-top: 3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .follow-btn {
+            background: var(--gradient);
+            border: none;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .follow-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0, 212, 255, 0.4);
+        }
+
+        .stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(26, 26, 26, 0.5);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            min-width: 120px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .features {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 3rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature {
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid rgba(0, 212, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 212, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature h3 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .feature p {
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+
+        .update-form {
+            max-width: 500px;
+            margin: 3rem auto;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        .update-form h3 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--bg-primary);
+            border: 2px solid rgba(0, 212, 255, 0.2);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--gradient);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .updates {
+            margin-top: 3rem;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid rgba(0, 212, 255, 0.1);
+        }
+
+        .update-item {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .update-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background: var(--accent);
+            color: white;
+            border-radius: 8px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1001;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        @media (max-width: 768px) {
+            .stats {
+                gap: 1rem;
+            }
+            
+            .features {
+                padding: 3rem 1rem;
+            }
+            
+            .cta-section {
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <main id="main-content" class="hidden">
+        <section class="hero">
+            <div class="hero-content">
+                <h1 class="logo">SingularityEngn</h1>
+                <p class="tagline">The Evolution of AI Code Generation</p>
+                
+                <div class="cta-section">
+                    <a href="#" class="follow-btn" onclick="followAccount()">
+                        🚀 Follow the Evolution
+                    </a>
+                    
+                    <div class="stats" id="stats">
+                        <div class="stat">
+                            <span class="stat-number" id="follower-count">0</span>
+                            <span class="stat-label">Future Followers</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number" id="apps-generated">0</span>
+                            <span class="stat-label">Apps Generated</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">∞</span>
+                            <span class="stat-label">Possibilities</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features">
+            <h2>Why Follow SingularityEngn?</h2>
+            <div class="features-grid">
+                <div class="feature">
+                    <h3>🎯 Next-Gen Development</h3>
+                    <p>Experience the future of code generation with advanced AI that creates stunning, functional applications from simple descriptions.</p>
+                </div>
+                <div class="feature">
+                    <h3>⚡ Lightning Fast</h3>
+                    <p>From concept to deployment in seconds. No more waiting weeks for development cycles - get your ideas built instantly.</p>
+                </div>
+                <div class="feature">
+                    <h3>🌐 Universal Compatibility</h3>
+                    <p>Every app works perfectly across all devices and browsers. Mobile-first, responsive, and optimized for performance.</p>
+                </div>
+                <div class="feature">
+                    <h3>🔮 Future Updates</h3>
+                    <p>This is just the beginning. Follow now to be the first to experience new features, capabilities, and revolutionary updates.</p>
+                </div>
+                <div class="feature">
+                    <h3>💡 Innovative Solutions</h3>
+                    <p>Cutting-edge technology meets practical application. Build games, tools, dashboards, and more with unprecedented ease.</p>
+                </div>
+                <div class="feature">
+                    <h3>🤖 AI-Powered Excellence</h3>
+                    <p>Not just another code generator - this is intelligent development that learns, adapts, and evolves with your needs.</p>
+                </div>
+            </div>
+
+            <div class="update-form">
+                <h3>📢 Share an Update</h3>
+                <form onsubmit="postUpdate(event)">
+                    <div class="form-group">
+                        <label for="update-title">Update Title</label>
+                        <input type="text" id="update-title" placeholder="What's new with SingularityEngn?" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="update-content">Details</label>
+                        <textarea id="update-content" rows="3" placeholder="Share the latest developments, features, or announcements..." required></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">Post Update</button>
+                </form>
+            </div>
+
+            <div class="updates" id="updates-section">
+                <h3>📈 Latest Updates</h3>
+                <div id="updates-list">
+                    <!-- Updates will be loaded here -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        async function init() {
+            // Load existing data
+            const stats = await db.get('stats') || { followers: 0, appsGenerated: 0 };
+            const updates = await db.get('updates') || [];
+
+            // Update stats display
+            document.getElementById('follower-count').textContent = stats.followers;
+            document.getElementById('apps-generated').textContent = stats.appsGenerated;
+
+            // Load updates
+            renderUpdates(updates);
+
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+            }, 1000);
+        }
+
+        async function followAccount() {
+            try {
+                const stats = await db.get('stats') || { followers: 0, appsGenerated: 0 };
+                stats.followers += 1;
+                stats.appsGenerated += Math.floor(Math.random() * 3) + 1; // Simulate app generation
+                
+                await db.set('stats', stats);
+                
+                document.getElementById('follower-count').textContent = stats.followers;
+                document.getElementById('apps-generated').textContent = stats.appsGenerated;
+                
+                showToast('🎉 Welcome to the future! Thanks for following SingularityEngn!');
+            } catch (error) {
+                showToast('❌ Unable to follow right now. Try again!');
+            }
+        }
+
+        async function postUpdate(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('update-title').value;
+            const content = document.getElementById('update-content').value;
+            
+            if (!title || !content) return;
+
+            try {
+                const updates = await db.get('updates') || [];
+                const newUpdate = {
+                    id: Date.now(),
+                    title,
+                    content,
+                    timestamp: new Date().toISOString()
+                };
+                
+                updates.unshift(newUpdate);
+                
+                // Keep only the latest 10 updates
+                if (updates.length > 10) {
+                    updates.splice(10);
+                }
+                
+                await db.set('updates', updates);
+                
+                renderUpdates(updates);
+                
+                // Clear form
+                document.getElementById('update-title').value = '';
+                document.getElementById('update-content').value = '';
+                
+                showToast('✅ Update posted successfully!');
+            } catch (error) {
+                showToast('❌ Unable to post update. Try again!');
+            }
+        }
+
+        function renderUpdates(updates) {
+            const updatesList = document.getElementById('updates-list');
+            
+            if (updates.length === 0) {
+                updatesList.innerHTML = '<p style="color: #888; text-align: center; padding: 2rem;">No updates yet. Be the first to share something!</p>';
+                return;
+            }
+            
+            updatesList.innerHTML = updates.map(update => `
+                <div class="update-item">
+                    <div class="update-meta">${new Date(update.timestamp).toLocaleDateString()} at ${new Date(update.timestamp).toLocaleTimeString()}</div>
+                    <h4 style="color: #00d4ff; margin-bottom: 0.5rem;">${update.title}</h4>
+                    <p>${update.content}</p>
+                </div>
+            `).join('');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
