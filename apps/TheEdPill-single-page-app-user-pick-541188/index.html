@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "TheEdPill-single-page-app-user-pick-541188";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tool Finder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0a0a;
+            --accent: #00d4ff;
+            --text: #e0e0e0;
+            --text-muted: #888;
+            --card-bg: #1a1a1a;
+            --border: #333;
+            --success: #00ff88;
+            --warning: #ffaa00;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            opacity: 0;
+            animation: fadeIn 0.5s ease 0.3s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, var(--accent), #00aa88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 3rem;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+        }
+
+        .form-section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .form-section:hover {
+            border-color: var(--accent);
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text);
+            font-size: 1.1rem;
+        }
+
+        .option-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .option-card {
+            background: var(--bg-dark);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .option-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .option-card.selected {
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+        }
+
+        .option-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .option-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .find-btn {
+            background: linear-gradient(45deg, var(--accent), #00aa88);
+            color: var(--bg-dark);
+            border: none;
+            padding: 1rem 3rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: block;
+            margin: 2rem auto;
+            min-width: 200px;
+        }
+
+        .find-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+        }
+
+        .find-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results {
+            margin-top: 3rem;
+        }
+
+        .results-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .tool-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(45deg, var(--accent), #00aa88);
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: var(--accent);
+        }
+
+        .tool-rank {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--accent);
+            color: var(--bg-dark);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .tool-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .tool-desc {
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .tool-pricing {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            display: inline-block;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 {
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .option-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <h1>AI Tool Finder</h1>
+        <p class="subtitle">Find the perfect AI tools for your goals and skill level</p>
+
+        <div class="form-section">
+            <div class="form-group">
+                <label>What's your goal?</label>
+                <div class="option-grid" id="goalOptions">
+                    <div class="option-card" data-value="write_content">
+                        <div class="option-title">Write Content</div>
+                        <div class="option-desc">Articles, blogs, copy, social media</div>
+                    </div>
+                    <div class="option-card" data-value="build_apps">
+                        <div class="option-title">Build Apps</div>
+                        <div class="option-desc">Web, mobile, desktop applications</div>
+                    </div>
+                    <div class="option-card" data-value="make_images">
+                        <div class="option-title">Make Images</div>
+                        <div class="option-desc">Art, graphics, photos, designs</div>
+                    </div>
+                    <div class="option-card" data-value="analyze_data">
+                        <div class="option-title">Analyze Data</div>
+                        <div class="option-desc">Insights, reports, visualizations</div>
+                    </div>
+                    <div class="option-card" data-value="automate_tasks">
+                        <div class="option-title">Automate Tasks</div>
+                        <div class="option-desc">Workflows, processes, repetitive work</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>What's your skill level?</label>
+                <div class="option-grid" id="skillOptions">
+                    <div class="option-card" data-value="beginner">
+                        <div class="option-title">Beginner</div>
+                        <div class="option-desc">New to AI tools, need simple interfaces</div>
+                    </div>
+                    <div class="option-card" data-value="intermediate">
+                        <div class="option-title">Intermediate</div>
+                        <div class="option-desc">Some experience, want more features</div>
+                    </div>
+                    <div class="option-card" data-value="advanced">
+                        <div class="option-title">Advanced</div>
+                        <div class="option-desc">Expert user, need full customization</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="find-btn" id="findBtn" disabled>Find AI Tools</button>
+        </div>
+
+        <div class="results" id="results" style="display: none;">
+            <h2 class="results-title" id="resultsTitle"></h2>
+            <div class="tools-grid" id="toolsGrid"></div>
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        const toolsDatabase = {
+            write_content: {
+                beginner: [
+                    { name: "ChatGPT", desc: "Conversational AI for writing assistance and brainstorming", pricing: "$20/month" },
+                    { name: "Jasper", desc: "AI writing assistant with templates for various content types", pricing: "$49/month" },
+                    { name: "Copy.ai", desc: "Simple AI copywriter for marketing and social content", pricing: "$36/month" }
+                ],
+                intermediate: [
+                    { name: "Claude", desc: "Advanced AI for long-form content and complex writing tasks", pricing: "$20/month" },
+                    { name: "Writesonic", desc: "AI writer with SEO optimization and brand voice training", pricing: "$19/month" },
+                    { name: "Rytr", desc: "AI writing tool with 40+ use cases and plagiarism checking", pricing: "$9/month" }
+                ],
+                advanced: [
+                    { name: "GPT-4 API", desc: "Direct access to OpenAI's most powerful language model", pricing: "$0.03/1K tokens" },
+                    { name: "Claude API", desc: "Anthropic's advanced AI with 100K context window", pricing: "$0.008/1K tokens" },
+                    { name: "Cohere Generate", desc: "Enterprise-grade text generation with fine-tuning", pricing: "$1/1M tokens" }
+                ]
+            },
+            build_apps: {
+                beginner: [
+                    { name: "Bubble", desc: "No-code platform with AI-powered app generation", pricing: "$25/month" },
+                    { name: "Replit", desc: "AI-assisted coding environment for beginners", pricing: "$7/month" },
+                    { name: "GitHub Copilot", desc: "AI code completion integrated into popular editors", pricing: "$10/month" }
+                ],
+                intermediate: [
+                    { name: "Cursor", desc: "AI-powered code editor with advanced autocomplete", pricing: "$20/month" },
+                    { name: "Tabnine", desc: "AI code assistant supporting 30+ programming languages", pricing: "$12/month" },
+                    { name: "CodeWhisperer", desc: "Amazon's AI coding companion with security scanning", pricing: "Free" }
+                ],
+                advanced: [
+                    { name: "OpenAI Codex", desc: "Powerful AI model for code generation and translation", pricing: "API usage" },
+                    { name: "DeepMind AlphaCode", desc: "Research-grade AI for competitive programming", pricing: "Research access" },
+                    { name: "Anthropic Claude for Code", desc: "Advanced reasoning AI for complex coding tasks", pricing: "$0.008/1K tokens" }
+                ]
+            },
+            make_images: {
+                beginner: [
+                    { name: "DALL-E 2", desc: "User-friendly AI image generator from simple text prompts", pricing: "$15/115 credits" },
+                    { name: "Canva AI", desc: "Integrated AI image generation within design platform", pricing: "$15/month" },
+                    { name: "Midjourney", desc: "Discord-based AI art generator with stunning results", pricing: "$10/month" }
+                ],
+                intermediate: [
+                    { name: "Stable Diffusion", desc: "Open-source AI image model with community tools", pricing: "Free" },
+                    { name: "Adobe Firefly", desc: "AI image generation integrated into Creative Cloud", pricing: "$23/month" },
+                    { name: "RunwayML", desc: "Creative AI suite for images, video, and audio", pricing: "$15/month" }
+                ],
+                advanced: [
+                    { name: "ComfyUI", desc: "Node-based interface for complex Stable Diffusion workflows", pricing: "Free" },
+                    { name: "Invoke AI", desc: "Professional-grade Stable Diffusion with advanced features", pricing: "Free" },
+                    { name: "DreamStudio", desc: "Stability AI's official platform with API access", pricing: "$10/1000 credits" }
+                ]
+            },
+            analyze_data: {
+                beginner: [
+                    { name: "ChatGPT Data Analyst", desc: "Upload data and get insights through conversation", pricing: "$20/month" },
+                    { name: "Julius AI", desc: "AI data analyst that creates charts and reports", pricing: "$20/month" },
+                    { name: "Tableau Ask Data", desc: "Natural language queries for business intelligence", pricing: "$75/month" }
+                ],
+                intermediate: [
+                    { name: "DataRobot", desc: "Automated machine learning platform for predictions", pricing: "Custom" },
+                    { name: "H2O.ai", desc: "Open-source machine learning with AutoML features", pricing: "Free tier" },
+                    { name: "Alteryx", desc: "Self-service analytics with AI-powered insights", pricing: "$5,195/year" }
+                ],
+                advanced: [
+                    { name: "Amazon SageMaker", desc: "Fully managed ML service for custom model building", pricing: "Pay per use" },
+                    { name: "Google AutoML", desc: "Custom machine learning models without coding", pricing: "Pay per use" },
+                    { name: "Azure Machine Learning", desc: "Cloud-based ML service with MLOps capabilities", pricing: "Pay per use" }
+                ]
+            },
+            automate_tasks: {
+                beginner: [
+                    { name: "Zapier", desc: "Connect apps and automate workflows with AI assistance", pricing: "$20/month" },
+                    { name: "IFTTT", desc: "Simple automation platform with AI-powered applets", pricing: "$4/month" },
+                    { name: "Microsoft Power Automate", desc: "Workflow automation with AI Builder integration", pricing: "$15/month" }
+                ],
+                intermediate: [
+                    { name: "Make (Integromat)", desc: "Visual automation platform with advanced logic", pricing: "$9/month" },
+                    { name: "UiPath", desc: "Robotic process automation with AI capabilities", pricing: "Free tier" },
+                    { name: "Automation Anywhere", desc: "Enterprise RPA with cognitive automation", pricing: "Custom" }
+                ],
+                advanced: [
+                    { name: "LangChain", desc: "Framework for building AI-powered automation chains", pricing: "Open source" },
+                    { name: "n8n", desc: "Self-hosted workflow automation with custom nodes", pricing: "Free" },
+                    { name: "Apache Airflow", desc: "Platform for developing and scheduling workflows", pricing: "Open source" }
+                ]
+            }
+        };
+
+        let selectedGoal = null;
+        let selectedSkill = null;
+
+        async function init() {
+            // Load previous selections
+            try {
+                const savedData = await db.get("user_selections") || {};
+                selectedGoal = savedData.goal || null;
+                selectedSkill = savedData.skill || null;
+                
+                // Restore UI state
+                if (selectedGoal) {
+                    document.querySelector(`[data-value="${selectedGoal}"]`).classList.add('selected');
+                }
+                if (selectedSkill) {
+                    document.querySelector(`#skillOptions [data-value="${selectedSkill}"]`).classList.add('selected');
+                }
+                
+                updateFindButton();
+            } catch (error) {
+                console.log('No previous selections found');
+            }
+
+            // Hide loader
+            document.getElementById('loader').classList.add('hidden');
+        }
+
+        function setupEventListeners() {
+            // Goal selection
+            document.getElementById('goalOptions').addEventListener('click', (e) => {
+                const card = e.target.closest('.option-card');
+                if (card) {
+                    document.querySelectorAll('#goalOptions .option-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedGoal = card.dataset.value;
+                    updateFindButton();
+                    saveSelections();
+                }
+            });
+
+            // Skill selection
+            document.getElementById('skillOptions').addEventListener('click', (e) => {
+                const card = e.target.closest('.option-card');
+                if (card) {
+                    document.querySelectorAll('#skillOptions .option-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedSkill = card.dataset.value;
+                    updateFindButton();
+                    saveSelections();
+                }
+            });
+
+            // Find tools button
+            document.getElementById('findBtn').addEventListener('click', findTools);
+        }
+
+        async function saveSelections() {
+            try {
+                await db.set("user_selections", {
+                    goal: selectedGoal,
+                    skill: selectedSkill
+                });
+            } catch (error) {
+                console.log('Could not save selections');
+            }
+        }
+
+        function updateFindButton() {
+            const btn = document.getElementById('findBtn');
+            btn.disabled = !selectedGoal || !selectedSkill;
+        }
+
+        function findTools() {
+            if (!selectedGoal || !selectedSkill) return;
+
+            const tools = toolsDatabase[selectedGoal][selectedSkill];
+            const goalName = document.querySelector(`#goalOptions [data-value="${selectedGoal}"] .option-title`).textContent;
+            const skillName = selectedSkill.charAt(0).toUpperCase() + selectedSkill.slice(1);
+
+            document.getElementById('resultsTitle').textContent = `Top 3 AI Tools for ${goalName} (${skillName})`;
+            
+            const toolsGrid = document.getElementById('toolsGrid');
+            toolsGrid.innerHTML = tools.map((tool, index) => `
+                <div class="tool-card">
+                    <div class="tool-rank">${index + 1}</div>
+                    <div class="tool-name">${tool.name}</div>
+                    <div class="tool-desc">${tool.desc}</div>
+                    <div class="tool-pricing">${tool.pricing}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Initialize app
+        setupEventListeners();
+        init();
+    </script>
+</body>
+</html>
