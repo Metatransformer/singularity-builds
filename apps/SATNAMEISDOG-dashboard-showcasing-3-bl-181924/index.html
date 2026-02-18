@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "SATNAMEISDOG-dashboard-showcasing-3-bl-181924";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --accent: #00d4ff;
+            --text-primary: #e0e0e0;
+            --text-muted: #999;
+            --border: #333;
+            --success: #4ade80;
+            --warning: #fbbf24;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .dashboard {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            opacity: 0;
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent), #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .blockchain-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            animation: slideUp 0.8s ease forwards;
+        }
+
+        .blockchain-card:nth-child(2) { animation-delay: 0.2s; }
+        .blockchain-card:nth-child(3) { animation-delay: 0.4s; }
+
+        .blockchain-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--accent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .blockchain-card:hover::before {
+            opacity: 1;
+        }
+
+        .blockchain-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 20px 40px rgba(0, 212, 255, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .blockchain-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: 1rem;
+        }
+
+        .btc { background: linear-gradient(135deg, #f7931a, #ff6b35); }
+        .eth { background: linear-gradient(135deg, #627eea, #4f46e5); }
+        .sol { background: linear-gradient(135deg, #9945ff, #14f195); }
+
+        .blockchain-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .blockchain-symbol {
+            color: var(--text-muted);
+            margin-left: 0.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--accent);
+            font-family: 'Courier New', monospace;
+        }
+
+        .block-visual {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: rgba(0, 212, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        .block-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .block-number {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .block-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-confirmed {
+            background: rgba(74, 222, 128, 0.2);
+            color: var(--success);
+        }
+
+        .status-pending {
+            background: rgba(251, 191, 36, 0.2);
+            color: var(--warning);
+        }
+
+        .tx-list {
+            margin-top: 1rem;
+        }
+
+        .tx-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
+
+        .tx-item:last-child {
+            border-bottom: none;
+        }
+
+        .tx-hash {
+            font-family: 'Courier New', monospace;
+            color: var(--text-muted);
+        }
+
+        .tx-fee {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .refresh-btn {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            width: 100%;
+        }
+
+        .refresh-btn:hover {
+            background: #00c4e8;
+            transform: translateY(-2px);
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .last-updated {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 2rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .updating {
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                padding: 1rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .blockchain-card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="dashboard">
+        <div class="header">
+            <h1>Blockchain Dashboard</h1>
+            <p>Real-time monitoring of Bitcoin, Ethereum, and Solana networks</p>
+        </div>
+
+        <div class="grid" id="blockchainGrid">
+            <!-- Blockchain cards will be generated here -->
+        </div>
+
+        <div class="last-updated" id="lastUpdated">
+            Last updated: Never
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        const blockchains = [
+            {
+                name: 'Bitcoin',
+                symbol: 'BTC',
+                icon: '₿',
+                class: 'btc'
+            },
+            {
+                name: 'Ethereum',
+                symbol: 'ETH',
+                icon: 'Ξ',
+                class: 'eth'
+            },
+            {
+                name: 'Solana',
+                symbol: 'SOL',
+                icon: '◎',
+                class: 'sol'
+            }
+        ];
+
+        // Generate mock data for blockchain status
+        function generateBlockchainData(blockchain) {
+            const baseBlocks = {
+                'BTC': 820000,
+                'ETH': 18500000,
+                'SOL': 220000000
+            };
+
+            const baseBlock = baseBlocks[blockchain.symbol];
+            const currentBlock = baseBlock + Math.floor(Math.random() * 1000);
+            const txCount = Math.floor(Math.random() * 3000) + 500;
+            
+            const transactions = [];
+            for (let i = 0; i < Math.min(5, txCount); i++) {
+                transactions.push({
+                    hash: generateTxHash(),
+                    fee: generateFee(blockchain.symbol)
+                });
+            }
+
+            return {
+                ...blockchain,
+                currentBlock,
+                txCount,
+                avgFee: calculateAvgFee(transactions),
+                blockTime: getBlockTime(blockchain.symbol),
+                status: Math.random() > 0.1 ? 'confirmed' : 'pending',
+                transactions
+            };
+        }
+
+        function generateTxHash() {
+            const chars = '0123456789abcdef';
+            let hash = '';
+            for (let i = 0; i < 12; i++) {
+                hash += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return hash;
+        }
+
+        function generateFee(symbol) {
+            const fees = {
+                'BTC': (Math.random() * 50 + 10).toFixed(0) + ' sat/vB',
+                'ETH': (Math.random() * 100 + 20).toFixed(0) + ' gwei',
+                'SOL': (Math.random() * 0.01 + 0.001).toFixed(4) + ' SOL'
+            };
+            return fees[symbol];
+        }
+
+        function calculateAvgFee(transactions) {
+            if (transactions.length === 0) return '0';
+            return transactions[0].fee; // Simplified for display
+        }
+
+        function getBlockTime(symbol) {
+            const times = {
+                'BTC': '~10 min',
+                'ETH': '~12 sec',
+                'SOL': '~400 ms'
+            };
+            return times[symbol];
+        }
+
+        function createBlockchainCard(data) {
+            return `
+                <div class="blockchain-card">
+                    <div class="card-header">
+                        <div class="blockchain-icon ${data.class}">
+                            ${data.icon}
+                        </div>
+                        <div>
+                            <div class="blockchain-name">
+                                ${data.name}
+                                <span class="blockchain-symbol">${data.symbol}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Current Block</div>
+                            <div class="stat-value">#${data.currentBlock.toLocaleString()}</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-label">Block Time</div>
+                            <div class="stat-value">${data.blockTime}</div>
+                        </div>
+                    </div>
+
+                    <div class="block-visual">
+                        <div class="block-header">
+                            <span class="block-number">Block #${data.currentBlock.toLocaleString()}</span>
+                            <span class="block-status status-${data.status}">
+                                ${data.status}
+                            </span>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-label">Transactions Processed</div>
+                            <div class="stat-value">${data.txCount.toLocaleString()}</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-label">Average Fee</div>
+                            <div class="stat-value">${data.avgFee}</div>
+                        </div>
+
+                        <div class="tx-list">
+                            <div class="stat-label">Recent Transactions</div>
+                            ${data.transactions.map(tx => `
+                                <div class="tx-item">
+                                    <span class="tx-hash">${tx.hash}...</span>
+                                    <span class="tx-fee">${tx.fee}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <button class="refresh-btn" onclick="refreshBlockchain('${data.symbol}')">
+                        Refresh ${data.symbol} Data
+                    </button>
+                </div>
+            `;
+        }
+
+        async function loadDashboard() {
+            try {
+                // Load cached data or generate new
+                let dashboardData = await db.get('blockchainData') || {};
+                
+                const grid = document.getElementById('blockchainGrid');
+                const cards = [];
+
+                for (const blockchain of blockchains) {
+                    let data;
+                    if (dashboardData[blockchain.symbol] && 
+                        Date.now() - dashboardData[blockchain.symbol].timestamp < 60000) {
+                        // Use cached data if less than 1 minute old
+                        data = dashboardData[blockchain.symbol].data;
+                    } else {
+                        // Generate new data
+                        data = generateBlockchainData(blockchain);
+                        dashboardData[blockchain.symbol] = {
+                            data,
+                            timestamp: Date.now()
+                        };
+                    }
+                    
+                    cards.push(createBlockchainCard(data));
+                }
+
+                grid.innerHTML = cards.join('');
+                
+                // Save updated data
+                await db.set('blockchainData', dashboardData);
+                
+                // Update last updated time
+                updateLastUpdated();
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('blockchainGrid').innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Error loading blockchain data. Please refresh the page.
+                    </div>
+                `;
+            }
+        }
+
+        async function refreshBlockchain(symbol) {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Refreshing...';
+            button.classList.add('updating');
+
+            try {
+                let dashboardData = await db.get('blockchainData') || {};
+                
+                const blockchain = blockchains.find(b => b.symbol === symbol);
+                const newData = generateBlockchainData(blockchain);
+                
+                dashboardData[symbol] = {
+                    data: newData,
+                    timestamp: Date.now()
+                };
+                
+                await db.set('blockchainData', dashboardData);
+                
+                // Reload the entire dashboard to reflect changes
+                await loadDashboard();
+                
+            } catch (error) {
+                console.error('Error refreshing blockchain data:', error);
+            } finally {
+                setTimeout(() => {
+                    button.disabled = false;
+                    button.textContent = `Refresh ${symbol} Data`;
+                    button.classList.remove('updating');
+                }, 500);
+            }
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            document.getElementById('lastUpdated').textContent = 
+                `Last updated: ${now.toLocaleTimeString()}`;
+        }
+
+        // Auto-refresh every 30 seconds
+        let autoRefreshInterval;
+
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(async () => {
+                await loadDashboard();
+            }, 30000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        }
+
+        // Initialize the app
+        async function init() {
+            try {
+                await loadDashboard();
+                startAutoRefresh();
+            } catch (error) {
+                console.error('Failed to initialize dashboard:', error);
+            } finally {
+                // Hide loader
+                setTimeout(() => {
+                    document.getElementById('loader').classList.add('hidden');
+                }, 800);
+            }
+        }
+
+        // Handle page visibility for auto-refresh
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                startAutoRefresh();
+                loadDashboard(); // Refresh when page becomes visible
+            }
+        });
+
+        // Make refresh function globally available
+        window.refreshBlockchain = refreshBlockchain;
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
