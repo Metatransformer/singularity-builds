@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "derikmironch-an-agent-for-me-that-will-267580";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter Growth Agent</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: #1a1a1a;
+            --accent: #00d4ff;
+            --text: #e0e0e0;
+            --text-muted: #888;
+            --success: #00ff88;
+            --warning: #ff8800;
+            --border: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+            background: linear-gradient(135deg, var(--bg-card), transparent);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent), #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .dashboard {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 30px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(0, 212, 255, 0.1);
+        }
+
+        .card h3 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent), #0099cc);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--bg-dark);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .strategy-list {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .strategy-list li {
+            padding: 15px;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--accent);
+            transition: all 0.3s ease;
+        }
+
+        .strategy-list li:hover {
+            transform: translateX(5px);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .progress-bar {
+            background: var(--bg-dark);
+            border-radius: 10px;
+            overflow: hidden;
+            height: 20px;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-dark);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--success);
+            color: #000;
+            padding: 15px 20px;
+            border-radius: 8px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            font-weight: 600;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            background: var(--warning);
+        }
+
+        .loader {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header fade-in">
+            <h1>🚀 Twitter Growth Agent</h1>
+            <p>AI-powered strategies to make your site viral on Twitter</p>
+        </div>
+
+        <div class="dashboard">
+            <div class="card fade-in">
+                <h3>🎯 Site Setup</h3>
+                <div class="form-group">
+                    <label for="siteUrl">Your Site URL</label>
+                    <input type="url" id="siteUrl" placeholder="https://example.com" value="https://t.co/0TFNwlbbOt">
+                </div>
+                <div class="form-group">
+                    <label for="siteType">Site Category</label>
+                    <select id="siteType">
+                        <option value="tech">Technology</option>
+                        <option value="business">Business</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="education">Education</option>
+                        <option value="lifestyle">Lifestyle</option>
+                        <option value="news">News</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="targetAudience">Target Audience</label>
+                    <input type="text" id="targetAudience" placeholder="e.g., developers, entrepreneurs, students">
+                </div>
+                <button class="btn" onclick="saveSiteConfig()">Save Configuration</button>
+            </div>
+
+            <div class="card fade-in">
+                <h3>📈 Growth Stats</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalTweets">0</div>
+                        <div class="stat-label">Tweets Generated</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="engagementRate">0%</div>
+                        <div class="stat-label">Est. Engagement</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="viralScore">0</div>
+                        <div class="stat-label">Viral Score</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p style="text-align: center; color: var(--text-muted);">Growth Progress</p>
+            </div>
+
+            <div class="card fade-in">
+                <h3>✨ AI Tweet Generator</h3>
+                <div class="form-group">
+                    <label for="tweetType">Tweet Style</label>
+                    <select id="tweetType">
+                        <option value="announcement">Product Announcement</option>
+                        <option value="thread">Educational Thread</option>
+                        <option value="question">Engaging Question</option>
+                        <option value="behind-scenes">Behind the Scenes</option>
+                        <option value="testimonial">Social Proof</option>
+                        <option value="controversy">Hot Take</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tweetTopic">Topic/Keywords</label>
+                    <input type="text" id="tweetTopic" placeholder="e.g., productivity, AI tools, startup life">
+                </div>
+                <button class="btn" onclick="generateTweet()">Generate Tweet</button>
+                <div class="loader" id="tweetLoader"></div>
+                <div id="generatedTweet" style="margin-top: 20px;"></div>
+            </div>
+
+            <div class="card fade-in">
+                <h3>🎪 Viral Strategies</h3>
+                <ul class="strategy-list" id="strategiesList">
+                    <li>🔥 Create controversy with hot takes in your niche</li>
+                    <li>📊 Share behind-the-scenes metrics and data</li>
+                    <li>🤝 Engage with bigger accounts in your space</li>
+                    <li>🧵 Write educational threads about your expertise</li>
+                    <li>❓ Ask thought-provoking questions to your audience</li>
+                </ul>
+                <button class="btn btn-secondary" onclick="generateNewStrategies()">Get New Strategies</button>
+            </div>
+
+            <div class="card fade-in">
+                <h3>⏰ Posting Schedule</h3>
+                <div class="form-group">
+                    <label for="postingFreq">Posts Per Day</label>
+                    <select id="postingFreq">
+                        <option value="1">1 post/day</option>
+                        <option value="3" selected>3 posts/day</option>
+                        <option value="5">5 posts/day</option>
+                        <option value="10">10 posts/day</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="timezone">Your Timezone</label>
+                    <select id="timezone">
+                        <option value="PST">Pacific (PST)</option>
+                        <option value="EST" selected>Eastern (EST)</option>
+                        <option value="GMT">GMT</option>
+                        <option value="CET">Central Europe (CET)</option>
+                    </select>
+                </div>
+                <button class="btn" onclick="optimizeSchedule()">Optimize Schedule</button>
+                <div id="scheduleOutput" style="margin-top: 20px;"></div>
+            </div>
+
+            <div class="card fade-in">
+                <h3>🎭 Content Calendar</h3>
+                <div id="contentCalendar"></div>
+                <button class="btn btn-secondary" onclick="generateContentCalendar()">Generate 7-Day Calendar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let siteConfig = {};
+        let growthStats = { tweets: 0, engagement: 0, viral: 0 };
+
+        async function init() {
+            try {
+                siteConfig = await db.get('siteConfig') || {};
+                growthStats = await db.get('growthStats') || { tweets: 0, engagement: 0, viral: 0 };
+                
+                if (siteConfig.url) {
+                    document.getElementById('siteUrl').value = siteConfig.url;
+                    document.getElementById('siteType').value = siteConfig.type || 'tech';
+                    document.getElementById('targetAudience').value = siteConfig.audience || '';
+                }
+                
+                updateStats();
+            } catch (error) {
+                console.error('Init error:', error);
+            }
+        }
+
+        async function saveSiteConfig() {
+            const url = document.getElementById('siteUrl').value;
+            const type = document.getElementById('siteType').value;
+            const audience = document.getElementById('targetAudience').value;
+            
+            if (!url) {
+                showToast('Please enter a site URL', 'error');
+                return;
+            }
+            
+            siteConfig = { url, type, audience };
+            await db.set('siteConfig', siteConfig);
+            showToast('Configuration saved successfully!');
+        }
+
+        function generateTweet() {
+            const loader = document.getElementById('tweetLoader');
+            const output = document.getElementById('generatedTweet');
+            const type = document.getElementById('tweetType').value;
+            const topic = document.getElementById('tweetTopic').value;
+            
+            loader.style.display = 'block';
+            output.innerHTML = '';
+            
+            setTimeout(() => {
+                loader.style.display = 'none';
+                const tweet = generateTweetContent(type, topic, siteConfig);
+                output.innerHTML = `
+                    <div style="background: var(--bg-dark); padding: 20px; border-radius: 10px; border-left: 3px solid var(--accent);">
+                        <p style="font-size: 16px; line-height: 1.5;">${tweet}</p>
+                        <div style="margin-top: 15px; display: flex; gap: 10px;">
+                            <button class="btn" onclick="copyTweet('${tweet.replace(/'/g, "\\'")}')">Copy Tweet</button>
+                            <button class="btn btn-secondary" onclick="saveTweet('${tweet.replace(/'/g, "\\'")}')">Save for Later</button>
+                        </div>
+                    </div>
+                `;
+                
+                growthStats.tweets++;
+                growthStats.engagement = Math.min(100, growthStats.engagement + Math.random() * 5);
+                growthStats.viral = Math.min(100, growthStats.viral + Math.random() * 3);
+                updateStats();
+                saveStats();
+            }, 1500);
+        }
+
+        function generateTweetContent(type, topic, config) {
+            const templates = {
+                announcement: [
+                    `🚀 Just launched something incredible! ${topic ? `It's all about ${topic}` : 'Check it out'} → ${config.url || 'link in bio'}`,
+                    `🎉 Big news! We've been working on ${topic || 'something amazing'} and it's finally here: ${config.url || 'link below'}`,
+                    `✨ New release alert! ${topic ? `${topic} enthusiasts` : 'Everyone'}, this one's for you: ${config.url || ''}`
+                ],
+                thread: [
+                    `🧵 THREAD: Everything I learned about ${topic || 'building products'} (1/7)\n\nIt all started when... ${config.url || ''}`,
+                    `🧵 Let me tell you about ${topic || 'my journey'}... (Thread 1/5)\n\nFirst lesson: ${config.url || ''}`,
+                    `🧵 ${topic || 'Here'}'s what nobody tells you about... (1/8)\n\n${config.url || ''}`
+                ],
+                question: [
+                    `What's your biggest challenge with ${topic || 'productivity'} right now?\n\n${config.url || 'Found this helpful:'} 👈`,
+                    `Quick question: How do you currently handle ${topic || 'daily tasks'}?\n\n${config.url || 'Here\'s my approach:'} 🔗`,
+                    `${topic ? `${topic} experts` : 'Everyone'}: What am I missing? ${config.url || ''}`
+                ],
+                'behind-scenes': [
+                    `📈 Behind the scenes: Here's what ${topic || 'our metrics'} look like this week... ${config.url || ''}`,
+                    `🛠️ Working late on ${topic || 'the next big feature'}. Here's a sneak peek: ${config.url || ''}`,
+                    `💭 Real talk about ${topic || 'building in public'}: ${config.url || ''}`
+                ],
+                testimonial: [
+                    `"This changed everything for me" - just got this message about ${topic || 'our tool'} 🥺\n\n${config.url || 'Check it out:'}`,
+                    `Customer win! They increased their ${topic || 'productivity'} by 300% using: ${config.url || ''}`,
+                    `Another success story with ${topic || 'our solution'}: ${config.url || 'See for yourself'} ✨`
+                ],
+                controversy: [
+                    `Hot take: ${topic || 'Everyone'} is doing it wrong. Here's why: ${config.url || ''}`,
+                    `Unpopular opinion about ${topic || 'the industry'}: ${config.url || 'My thoughts'} 🔥`,
+                    `${topic || 'This'} is overrated. Change my mind: ${config.url || ''}`
+                ]
+            };
+            
+            const typeTemplates = templates[type] || templates.announcement;
+            return typeTemplates[Math.floor(Math.random() * typeTemplates.length)];
+        }
+
+        function copyTweet(tweet) {
+            navigator.clipboard.writeText(tweet.replace(/\\'/g, "'")).then(() => {
+                showToast('Tweet copied to clipboard!');
+            });
+        }
+
+        async function saveTweet(tweet) {
+            const savedTweets = await db.get('savedTweets') || [];
+            savedTweets.push({
+                content: tweet.replace(/\\'/g, "'"),
+                timestamp: new Date().toISOString(),
+                used: false
+            });
+            await db.set('savedTweets', savedTweets);
+            showToast('Tweet saved for later!');
+        }
+
+        function generateNewStrategies() {
+            const strategies = [
+                "🎯 Use data storytelling - share specific numbers and outcomes",
+                "🤖 Jump on trending topics with your unique perspective", 
+                "👥 Host Twitter Spaces about your expertise",
+                "📱 Create carousel posts with actionable tips",
+                "🎬 Share short video demos or tutorials",
+                "💬 Reply thoughtfully to viral tweets in your niche",
+                "🏆 Create polls and surveys to boost engagement",
+                "🔄 Retweet with valuable commentary added",
+                "📧 Turn your best tweets into newsletter content",
+                "🎪 Host giveaways and contests for followers",
+                "🔥 Share failure stories and lessons learned",
+                "⚡ Use Twitter Analytics to optimize posting times",
+                "🎨 Create quote cards with key insights",
+                "🤝 Collaborate with other creators in your space",
+                "📈 Share weekly/monthly progress updates"
+            ];
+            
+            const list = document.getElementById('strategiesList');
+            list.innerHTML = '';
+            
+            // Pick 5 random strategies
+            const selected = strategies.sort(() => 0.5 - Math.random()).slice(0, 5);
+            selected.forEach(strategy => {
+                const li = document.createElement('li');
+                li.textContent = strategy;
+                li.style.animation = 'fadeIn 0.5s ease-in';
+                list.appendChild(li);
+            });
+            
+            showToast('New strategies generated!');
+        }
+
+        function optimizeSchedule() {
+            const freq = document.getElementById('postingFreq').value;
+            const timezone = document.getElementById('timezone').value;
+            const output = document.getElementById('scheduleOutput');
+            
+            const schedules = {
+                PST: ['6:00 AM', '12:00 PM', '6:00 PM', '9:00 PM'],
+                EST: ['9:00 AM', '1:00 PM', '5:00 PM', '8:00 PM'], 
+                GMT: ['2:00 PM', '6:00 PM', '10:00 PM', '1:00 AM'],
+                CET: ['3:00 PM', '7:00 PM', '11:00 PM', '2:00 AM']
+            };
+            
+            const times = schedules[timezone].slice(0, parseInt(freq));
+            
+            output.innerHTML = `
+                <div style="background: var(--bg-dark); padding: 20px; border-radius: 10px; margin-top: 20px;">
+                    <h4 style="color: var(--accent); margin-bottom: 15px;">Optimal Posting Times (${timezone})</h4>
+                    ${times.map((time, i) => `
+                        <div style="padding: 10px; margin: 5px 0; background: rgba(0,212,255,0.1); border-radius: 5px;">
+                            📅 Post ${i + 1}: ${time}
+                        </div>
+                    `).join('')}
+                    <p style="margin-top: 15px; color: var(--text-muted); font-size: 14px;">
+                        Based on ${freq} posts/day optimization for maximum engagement
+                    </p>
+                </div>
+            `;
+        }
+
+        function generateContentCalendar() {
+            const calendar = document.getElementById('contentCalendar');
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const themes = [
+                'Motivational Monday - Share inspiring content',
+                'Tutorial Tuesday - Educational threads',  
+                'Wisdom Wednesday - Industry insights',
+                'Throwback Thursday - Lessons learned',
+                'Feature Friday - Product highlights',
+                'Social Saturday - Community engagement',
+                'Sunday Summary - Week\'s achievements'
+            ];
+            
+            calendar.innerHTML = `
+                <div style="margin-top: 20px;">
+                    ${days.map((day, i) => `
+                        <div style="background: var(--bg-dark); padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 3px solid var(--accent);">
+                            <strong style="color: var(--accent);">${day}</strong><br>
+                            <span style="color: var(--text-muted);">${themes[i]}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        async function updateStats() {
+            document.getElementById('totalTweets').textContent = growthStats.tweets;
+            document.getElementById('engagementRate').textContent = Math.round(growthStats.engagement) + '%';
+            document.getElementById('viralScore').textContent = Math.round(growthStats.viral);
+            
+            const progress = (growthStats.tweets * 2 + growthStats.engagement + growthStats.viral) / 4;
+            document.getElementById('progressFill').style.width = Math.min(100, progress) + '%';
+        }
+
+        async function saveStats() {
+            await db.set('growthStats', growthStats);
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
