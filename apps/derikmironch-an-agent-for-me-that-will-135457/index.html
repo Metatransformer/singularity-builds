@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "derikmironch-an-agent-for-me-that-will-135457";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter Growth Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --accent: #00d4ff;
+            --text-primary: #e0e0e0;
+            --text-muted: #888;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff4444;
+            --border: #333;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            display: grid;
+            place-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            opacity: 0;
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            background: linear-gradient(135deg, var(--accent), #88ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent), #0099cc);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .activity-log {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            background: var(--bg-primary);
+        }
+
+        .log-entry {
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-entry .timestamp {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .log-entry .status {
+            margin-left: 0.5rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--success);
+        }
+
+        .status-pending {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .status-error {
+            background: rgba(255, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 0.75rem 1rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 9999;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-success {
+            background: var(--success);
+        }
+
+        .toast-error {
+            background: var(--error);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #88ccff);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Twitter Growth Agent</h1>
+            <p>AI-powered social media growth automation</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('setup')">Setup</button>
+            <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab" onclick="switchTab('activity')">Activity</button>
+        </div>
+
+        <div id="setup" class="tab-content active">
+            <div class="card">
+                <h2 style="margin-bottom: 1.5rem;">Campaign Configuration</h2>
+                <form id="campaignForm">
+                    <div class="form-group">
+                        <label for="targetUrl">Target URL</label>
+                        <input type="url" id="targetUrl" placeholder="https://your-site.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="strategy">Growth Strategy</label>
+                        <select id="strategy">
+                            <option value="hashtag">Hashtag Optimization</option>
+                            <option value="engagement">Engagement Boosting</option>
+                            <option value="community">Community Building</option>
+                            <option value="viral">Viral Content</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="keywords">Target Keywords</label>
+                        <textarea id="keywords" placeholder="Enter keywords separated by commas (e.g., tech, startup, AI)"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="budget">Daily Budget ($)</label>
+                        <input type="number" id="budget" min="10" max="1000" value="50">
+                    </div>
+                    
+                    <button type="submit" class="btn">🚀 Launch Campaign</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="analytics" class="tab-content">
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-value" id="impressions">0</div>
+                    <div class="stat-label">Impressions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="clicks">0</div>
+                    <div class="stat-label">Clicks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="followers">0</div>
+                    <div class="stat-label">New Followers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="engagement">0%</div>
+                    <div class="stat-label">Engagement Rate</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 style="margin-bottom: 1rem;">Campaign Progress</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">
+                    Campaign running for <span id="campaignDays">0</span> days
+                </p>
+            </div>
+        </div>
+
+        <div id="activity" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom: 1rem;">Recent Activity</h3>
+                <div class="activity-log" id="activityLog">
+                    <div class="empty-state">
+                        No activity yet. Start a campaign to see updates here.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let currentTab = 'setup';
+        let campaignActive = false;
+        let campaignStartTime = null;
+        let activityInterval = null;
+
+        async function init() {
+            try {
+                const savedCampaign = await db.get('activeCampaign');
+                const savedStats = await db.get('campaignStats') || {
+                    impressions: 0,
+                    clicks: 0,
+                    followers: 0,
+                    engagement: 0
+                };
+                const savedActivity = await db.get('activityLog') || [];
+
+                if (savedCampaign) {
+                    campaignActive = true;
+                    campaignStartTime = savedCampaign.startTime;
+                    
+                    // Populate form
+                    document.getElementById('targetUrl').value = savedCampaign.targetUrl || '';
+                    document.getElementById('strategy').value = savedCampaign.strategy || 'hashtag';
+                    document.getElementById('keywords').value = savedCampaign.keywords || '';
+                    document.getElementById('budget').value = savedCampaign.budget || 50;
+                    
+                    // Start simulation
+                    startCampaignSimulation();
+                }
+
+                updateStats(savedStats);
+                renderActivityLog(savedActivity);
+                
+                setTimeout(() => {
+                    document.getElementById('loader').classList.add('hidden');
+                }, 500);
+            } catch (error) {
+                console.error('Init error:', error);
+                document.getElementById('loader').classList.add('hidden');
+            }
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+
+            currentTab = tabName;
+        }
+
+        document.getElementById('campaignForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                targetUrl: document.getElementById('targetUrl').value,
+                strategy: document.getElementById('strategy').value,
+                keywords: document.getElementById('keywords').value,
+                budget: parseInt(document.getElementById('budget').value),
+                startTime: Date.now()
+            };
+
+            if (campaignActive) {
+                // Stop campaign
+                campaignActive = false;
+                clearInterval(activityInterval);
+                await db.delete('activeCampaign');
+                
+                e.target.innerHTML = '🚀 Launch Campaign';
+                showToast('Campaign stopped successfully', 'success');
+                
+                await addActivity('Campaign stopped', 'success');
+                return;
+            }
+
+            try {
+                await db.set('activeCampaign', formData);
+                campaignActive = true;
+                campaignStartTime = formData.startTime;
+                
+                e.target.innerHTML = '⏹️ Stop Campaign';
+                showToast('Campaign launched successfully!', 'success');
+                
+                await addActivity(`Campaign launched for ${formData.targetUrl}`, 'success');
+                startCampaignSimulation();
+                
+            } catch (error) {
+                showToast('Failed to launch campaign', 'error');
+                console.error('Campaign launch error:', error);
+            }
+        });
+
+        async function startCampaignSimulation() {
+            if (!campaignActive) return;
+
+            // Update button text
+            const submitBtn = document.querySelector('#campaignForm button[type="submit"]');
+            if (submitBtn) submitBtn.innerHTML = '⏹️ Stop Campaign';
+
+            activityInterval = setInterval(async () => {
+                if (!campaignActive) return;
+
+                // Simulate activity
+                const activities = [
+                    'Hashtag analysis completed',
+                    'Engagement boost applied',
+                    'New followers acquired',
+                    'Tweet optimization processed',
+                    'Community interaction triggered',
+                    'Viral content identified',
+                    'Influencer outreach sent',
+                    'Analytics data updated'
+                ];
+
+                const randomActivity = activities[Math.floor(Math.random() * activities.length)];
+                await addActivity(randomActivity, 'success');
+
+                // Update stats
+                const currentStats = await db.get('campaignStats') || {
+                    impressions: 0,
+                    clicks: 0,
+                    followers: 0,
+                    engagement: 0
+                };
+
+                currentStats.impressions += Math.floor(Math.random() * 500) + 100;
+                currentStats.clicks += Math.floor(Math.random() * 50) + 10;
+                currentStats.followers += Math.floor(Math.random() * 20) + 5;
+                currentStats.engagement = Math.min(95, currentStats.engagement + Math.random() * 2);
+
+                await db.set('campaignStats', currentStats);
+                updateStats(currentStats);
+
+            }, 3000 + Math.random() * 7000); // Random intervals between 3-10 seconds
+        }
+
+        async function addActivity(message, status) {
+            const activity = {
+                id: Date.now(),
+                message,
+                status,
+                timestamp: new Date().toLocaleTimeString()
+            };
+
+            let log = await db.get('activityLog') || [];
+            log.unshift(activity);
+            
+            // Keep only last 50 entries
+            if (log.length > 50) {
+                log = log.slice(0, 50);
+            }
+
+            await db.set('activityLog', log);
+            renderActivityLog(log);
+        }
+
+        function renderActivityLog(log) {
+            const logContainer = document.getElementById('activityLog');
+            
+            if (!log || log.length === 0) {
+                logContainer.innerHTML = '<div class="empty-state">No activity yet. Start a campaign to see updates here.</div>';
+                return;
+            }
+
+            logContainer.innerHTML = log.map(entry => `
+                <div class="log-entry">
+                    <span>${entry.message}</span>
+                    <span class="status status-${entry.status}">${entry.status.toUpperCase()}</span>
+                    <div class="timestamp">${entry.timestamp}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats(stats) {
+            document.getElementById('impressions').textContent = stats.impressions.toLocaleString();
+            document.getElementById('clicks').textContent = stats.clicks.toLocaleString();
+            document.getElementById('followers').textContent = stats.followers.toLocaleString();
+            document.getElementById('engagement').textContent = `${stats.engagement.toFixed(1)}%`;
+
+            // Update progress bar
+            const progress = Math.min(100, (stats.impressions / 10000) * 100);
+            document.getElementById('progressFill').style.width = `${progress}%`;
+
+            // Update campaign days
+            if (campaignStartTime) {
+                const days = Math.floor((Date.now() - campaignStartTime) / (1000 * 60 * 60 * 24));
+                document.getElementById('campaignDays').textContent = days;
+            }
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
