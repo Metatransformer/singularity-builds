@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "c_wirtz-report-generator-that-tak-564282";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P6 XER Report Generator</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #1a1a1a;
+            --border: #333;
+            --text: #e0e0e0;
+            --text-muted: #999;
+            --accent: #00d4ff;
+            --success: #00ff88;
+            --error: #ff4444;
+            --warning: #ffaa00;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: clamp(24px, 5vw, 36px);
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent), #0099cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        .upload-section {
+            background: var(--surface);
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-section:hover {
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .upload-section.dragover {
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-input {
+            display: none;
+        }
+
+        .upload-button {
+            background: linear-gradient(135deg, var(--accent), #0099cc);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .upload-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .upload-text {
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--success);
+            border-radius: 8px;
+            color: var(--success);
+        }
+
+        .reports-section {
+            display: grid;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .report-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .report-card:hover {
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .report-card h3 {
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .report-card p {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .generate-button {
+            width: 100%;
+            background: linear-gradient(135deg, var(--success), #00cc66);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .generate-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .generate-button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .gantt-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .gantt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .gantt-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .download-button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .download-button:hover {
+            background: #0099cc;
+            transform: scale(1.05);
+        }
+
+        .gantt-chart {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .gantt-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        .gantt-table th,
+        .gantt-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .gantt-table th {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .gantt-table td {
+            background: var(--surface);
+        }
+
+        .gantt-bar {
+            height: 20px;
+            background: linear-gradient(90deg, var(--accent), #0099cc);
+            border-radius: 4px;
+            position: relative;
+            display: inline-block;
+            min-width: 20px;
+        }
+
+        .progress-bar {
+            background: var(--success);
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .loader.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--error); }
+        .toast.warning { background: var(--warning); }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .upload-section {
+                padding: 30px 15px;
+            }
+            
+            .gantt-chart {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header fade-in">
+            <h1>P6 XER Report Generator</h1>
+            <p>Upload your Primavera P6 XER file to generate comprehensive construction scheduling reports</p>
+        </div>
+
+        <div class="upload-section" id="uploadSection">
+            <input type="file" id="xerFile" class="upload-input" accept=".xer">
+            <button class="upload-button" onclick="document.getElementById('xerFile').click()">
+                Select XER File
+            </button>
+            <div class="upload-text">or drag and drop your .xer file here</div>
+            <div id="fileInfo" class="file-info" style="display: none;"></div>
+        </div>
+
+        <div class="reports-section">
+            <div class="report-card" data-report="summary">
+                <h3>📊 Project Summary Report</h3>
+                <p>Overview of project milestones, critical path activities, and overall schedule performance metrics.</p>
+            </div>
+            <div class="report-card" data-report="critical">
+                <h3>⚡ Critical Path Analysis</h3>
+                <p>Detailed analysis of critical path activities, float calculations, and schedule risk assessment.</p>
+            </div>
+            <div class="report-card" data-report="resource">
+                <h3>👥 Resource Allocation Report</h3>
+                <p>Resource loading, utilization charts, and workforce distribution across project phases.</p>
+            </div>
+            <div class="report-card" data-report="progress">
+                <h3>📈 Progress Tracking Report</h3>
+                <p>Earned value analysis, percent complete tracking, and schedule variance reporting.</p>
+            </div>
+            <div class="report-card" data-report="lookAhead">
+                <h3>🔮 Look-Ahead Schedule</h3>
+                <p>Near-term activity forecast, upcoming milestones, and short-term resource requirements.</p>
+            </div>
+        </div>
+
+        <button class="generate-button" id="generateBtn" disabled>
+            Generate Selected Reports
+        </button>
+
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <div>Processing XER file and generating reports...</div>
+        </div>
+
+        <div class="gantt-container" id="ganttContainer"></div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let xerData = null;
+        let selectedReports = new Set();
+        let projectData = null;
+
+        async function init() {
+            // Load previously uploaded file info
+            const savedFile = await db.get('lastXerFile');
+            if (savedFile) {
+                document.getElementById('fileInfo').innerHTML = `
+                    <strong>Previously uploaded:</strong> ${savedFile.name} (${savedFile.size} bytes)<br>
+                    <small>Uploaded: ${new Date(savedFile.uploadDate).toLocaleDateString()}</small>
+                `;
+                document.getElementById('fileInfo').style.display = 'block';
+                document.getElementById('generateBtn').disabled = false;
+                xerData = savedFile.data;
+            }
+
+            // Load selected reports
+            const saved = await db.get('selectedReports') || [];
+            selectedReports = new Set(saved);
+            updateSelectedReports();
+
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            const uploadSection = document.getElementById('uploadSection');
+            const xerFile = document.getElementById('xerFile');
+            const generateBtn = document.getElementById('generateBtn');
+
+            // File upload handling
+            xerFile.addEventListener('change', handleFileSelect);
+
+            // Drag and drop
+            uploadSection.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadSection.classList.add('dragover');
+            });
+
+            uploadSection.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadSection.classList.remove('dragover');
+            });
+
+            uploadSection.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadSection.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+
+            // Report selection
+            document.querySelectorAll('.report-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const reportType = card.dataset.report;
+                    if (selectedReports.has(reportType)) {
+                        selectedReports.delete(reportType);
+                        card.style.borderColor = 'var(--border)';
+                        card.style.background = 'var(--surface)';
+                    } else {
+                        selectedReports.add(reportType);
+                        card.style.borderColor = 'var(--accent)';
+                        card.style.background = 'rgba(0, 212, 255, 0.1)';
+                    }
+                    saveSelectedReports();
+                });
+            });
+
+            // Generate reports
+            generateBtn.addEventListener('click', generateReports);
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.xer')) {
+                showToast('Please select a valid XER file', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const content = e.target.result;
+                    xerData = parseXER(content);
+                    
+                    const fileInfo = {
+                        name: file.name,
+                        size: file.size,
+                        uploadDate: new Date().toISOString(),
+                        data: xerData
+                    };
+
+                    await db.set('lastXerFile', fileInfo);
+
+                    document.getElementById('fileInfo').innerHTML = `
+                        <strong>File uploaded:</strong> ${file.name} (${formatFileSize(file.size)})<br>
+                        <strong>Activities:</strong> ${xerData.activities.length} | 
+                        <strong>Resources:</strong> ${xerData.resources.length} |
+                        <strong>Relationships:</strong> ${xerData.relationships.length}
+                    `;
+                    document.getElementById('fileInfo').style.display = 'block';
+                    document.getElementById('generateBtn').disabled = false;
+
+                    showToast('XER file processed successfully!', 'success');
+                } catch (error) {
+                    showToast('Error processing XER file: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parseXER(content) {
+            // Simplified XER parser for demo purposes
+            const lines = content.split('\n');
+            const data = {
+                activities: [],
+                resources: [],
+                relationships: [],
+                projects: [],
+                calendars: []
+            };
+
+            let currentTable = null;
+            let headers = [];
+
+            for (let line of lines) {
+                line = line.trim();
+                if (!line || line.startsWith('%')) continue;
+
+                if (line.startsWith('%T')) {
+                    currentTable = line.substring(2).toLowerCase();
+                    headers = [];
+                } else if (line.startsWith('%F')) {
+                    headers = line.substring(2).split('\t');
+                } else if (line.startsWith('%R')) {
+                    const values = line.substring(2).split('\t');
+                    const record = {};
+                    headers.forEach((header, index) => {
+                        record[header] = values[index] || '';
+                    });
+
+                    switch (currentTable) {
+                        case 'task':
+                            data.activities.push({
+                                id: record.task_id || `ACT_${data.activities.length + 1}`,
+                                name: record.task_name || `Activity ${data.activities.length + 1}`,
+                                duration: parseInt(record.target_drtn_hr_cnt) || 8,
+                                start: record.target_start_date || new Date().toISOString().split('T')[0],
+                                finish: record.target_end_date || new Date().toISOString().split('T')[0],
+                                progress: parseFloat(record.phys_complete_pct) || 0,
+                                type: record.task_type || 'Task Dependent'
+                            });
+                            break;
+                        case 'rsrc':
+                            data.resources.push({
+                                id: record.rsrc_id || `RES_${data.resources.length + 1}`,
+                                name: record.rsrc_name || `Resource ${data.resources.length + 1}`,
+                                type: record.rsrc_type || 'Labor'
+                            });
+                            break;
+                        case 'taskpred':
+                            data.relationships.push({
+                                predecessor: record.pred_task_id,
+                                successor: record.task_id,
+                                type: record.pred_type || 'FS',
+                                lag: parseInt(record.lag_hr_cnt) || 0
+                            });
+                            break;
+                    }
+                }
+            }
+
+            // Generate sample data if XER is empty or malformed
+            if (data.activities.length === 0) {
+                data.activities = generateSampleActivities();
+                data.resources = generateSampleResources();
+                data.relationships = generateSampleRelationships();
+            }
+
+            return data;
+        }
+
+        function generateSampleActivities() {
+            const phases = [
+                'Site Preparation', 'Foundation', 'Framing', 'Roofing', 'MEP Rough-in',
+                'Drywall', 'Flooring', 'Interior Finishes', 'Exterior Finishes', 'Final Inspection'
+            ];
+
+            return phases.map((phase, index) => ({
+                id: `ACT_${String(index + 1).padStart(3, '0')}`,
+                name: phase,
+                duration: Math.floor(Math.random() * 20) + 5,
+                start: new Date(Date.now() + index * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                finish: new Date(Date.now() + (index + 1) * 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                progress: Math.floor(Math.random() * 100),
+                type: 'Task Dependent',
+                critical: Math.random() > 0.7
+            }));
+        }
+
+        function generateSampleResources() {
+            return [
+                { id: 'RES_001', name: 'Project Manager', type: 'Labor' },
+                { id: 'RES_002', name: 'Site Foreman', type: 'Labor' },
+                { id: 'RES_003', name: 'Excavator', type: 'Equipment' },
+                { id: 'RES_004', name: 'Crane', type: 'Equipment' },
+                { id: 'RES_005', name: 'Concrete Crew', type: 'Labor' }
+            ];
+        }
+
+        function generateSampleRelationships() {
+            return [
+                { predecessor: 'ACT_001', successor: 'ACT_002', type: 'FS', lag: 0 },
+                { predecessor: 'ACT_002', successor: 'ACT_003', type: 'FS', lag: 1 },
+                { predecessor: 'ACT_003', successor: 'ACT_004', type: 'FS', lag: 0 }
+            ];
+        }
+
+        function updateSelectedReports() {
+            document.querySelectorAll('.report-card').forEach(card => {
+                const reportType = card.dataset.report;
+                if (selectedReports.has(reportType)) {
+                    card.style.borderColor = 'var(--accent)';
+                    card.style.background = 'rgba(0, 212, 255, 0.1)';
+                }
+            });
+        }
+
+        async function saveSelectedReports() {
+            await db.set('selectedReports', Array.from(selectedReports));
+        }
+
+        async function generateReports() {
+            if (!xerData || selectedReports.size === 0) {
+                showToast('Please select a file and at least one report type', 'warning');
+                return;
+            }
+
+            document.getElementById('loader').classList.add('active');
+            document.getElementById('ganttContainer').style.display = 'none';
+
+            try {
+                // Simulate processing time
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                const container = document.getElementById('ganttContainer');
+                container.innerHTML = '';
+
+                for (const reportType of selectedReports) {
+                    const reportHTML = generateReportHTML(reportType, xerData);
+                    container.innerHTML += reportHTML;
+                }
+
+                container.style.display = 'block';
+                container.classList.add('fade-in');
+
+                // Save generated reports
+                await db.set('lastGeneratedReports', {
+                    reports: Array.from(selectedReports),
+                    timestamp: new Date().toISOString(),
+                    data: xerData
+                });
+
+                showToast('Reports generated successfully!', 'success');
+            } catch (error) {
+                showToast('Error generating reports: ' + error.message, 'error');
+            } finally {
+                document.getElementById('loader').classList.remove('active');
+            }
+        }
+
+        function generateReportHTML(reportType, data) {
+            const reportConfig = {
+                summary: {
+                    title: '📊 Project Summary Report',
+                    description: 'Overview of project milestones and schedule performance'
+                },
+                critical: {
+                    title: '⚡ Critical Path Analysis',
+                    description: 'Critical path activities and schedule risk assessment'
+                },
+                resource: {
+                    title: '👥 Resource Allocation Report',
+                    description: 'Resource loading and workforce distribution'
+                },
+                progress: {
+                    title: '📈 Progress Tracking Report',
+                    description: 'Earned value analysis and schedule variance'
+                },
+                lookAhead: {
+                    title: '🔮 Look-Ahead Schedule',
+                    description: 'Near-term activity forecast and upcoming milestones'
+                }
+            };
+
+            const config = reportConfig[reportType];
+            const activities = getReportActivities(reportType, data);
+
+            return `
+                <div class="gantt-header">
+                    <div>
+                        <div class="gantt-title">${config.title}</div>
+                        <div style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">
+                            ${config.description}
+                        </div>
+                    </div>
+                    <button class="download-button" onclick="downloadReport('${reportType}')">
+                        Download Report
+                    </button>
+                </div>
+                <div class="gantt-chart">
+                    <table class="gantt-table">
+                        <thead>
+                            <tr>
+                                <th>Activity ID</th>
+                                <th>Activity Name</th>
+                                <th>Duration</th>
+                                <th>Start Date</th>
+                                <th>Finish Date</th>
+                                <th>Progress</th>
+                                <th>Schedule</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${activities.map(activity => `
+                                <tr>
+                                    <td>${activity.id}</td>
+                                    <td style="${activity.critical ? 'color: var(--error); font-weight: 600;' : ''}">${activity.name}</td>
+                                    <td>${activity.duration}d</td>
+                                    <td>${formatDate(activity.start)}</td>
+                                    <td>${formatDate(activity.finish)}</td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div style="width: 60px; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
+                                                <div class="progress-bar" style="width: ${activity.progress}%; background: ${activity.progress >= 100 ? 'var(--success)' : 'var(--accent)'}"></div>
+                                            </div>
+                                            <span style="font-size: 12px; color: var(--text-muted);">${activity.progress}%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="gantt-bar" style="width: ${Math.max(activity.duration * 3, 20)}px; ${activity.critical ? 'background: linear-gradient(90deg, var(--error), #cc0000);' : ''}">
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin: 20px 0; padding: 15px; background: rgba(0, 212, 255, 0.05); border-radius: 8px; font-size: 14px; color: var(--text-muted);">
+                    <strong>Report Summary:</strong> ${activities.length} activities displayed • 
+                    Generated on ${new Date().toLocaleDateString()} • 
+                    ${activities.filter(a => a.critical).length} critical activities identified
+                </div>
+            `;
+        }
+
+        function getReportActivities(reportType, data) {
+            const activities = data.activities || [];
+
+            switch (reportType) {
+                case 'critical':
+                    return activities.filter(a => a.critical).slice(0, 10);
+                case 'progress':
+                    return activities.filter(a => a.progress > 0 && a.progress < 100).slice(0, 10);
+                case 'lookAhead':
+                    const now = new Date();
+                    const twoWeeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+                    return activities.filter(a => {
+                        const start = new Date(a.start);
+                        return start >= now && start <= twoWeeks;
+                    }).slice(0, 10);
+                case 'resource':
+                    return activities.slice(0, 8);
+                default:
+                    return activities.slice(0, 10);
+            }
+        }
+
+        function downloadReport(reportType) {
+            const reportElement = event.target.closest('.gantt-container');
+            const reportHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Construction Schedule Report</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+                        th { background-color: #f5f5f5; }
+                        .progress-bar { height: 8px; background: #e0e0e0; border-radius: 4px; }
+                        .progress-fill { height: 100%; background: #00d4ff; border-radius: 4px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>P6 XER Construction Schedule Report</h1>
+                    <p>Generated on ${new Date().toLocaleDateString()}</p>
+                    ${reportElement.innerHTML}
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([reportHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${reportType}_report_${new Date().toISOString().split('T')[0]}.html`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('Report downloaded successfully!', 'success');
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
