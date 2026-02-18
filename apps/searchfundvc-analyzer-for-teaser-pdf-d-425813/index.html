@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "searchfundvc-analyzer-for-teaser-pdf-d-425813";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self Funded Search Deal Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --accent: #00d4ff;
+            --accent-hover: #00b8e6;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff4444;
+            --border: #333;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            display: grid;
+            place-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--bg-tertiary);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            background: linear-gradient(135deg, var(--accent), #00a8cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .deal-input {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+        }
+
+        .analysis-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .criteria-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .criteria-item {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1rem;
+            border-left: 4px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .criteria-item.pass {
+            border-left-color: var(--success);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .criteria-item.warn {
+            border-left-color: var(--warning);
+            background: rgba(255, 170, 0, 0.05);
+        }
+
+        .criteria-item.fail {
+            border-left-color: var(--error);
+            background: rgba(255, 68, 68, 0.05);
+        }
+
+        .criteria-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .criteria-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .criteria-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-pass {
+            background: var(--success);
+            color: var(--bg-primary);
+        }
+
+        .status-warn {
+            background: var(--warning);
+            color: var(--bg-primary);
+        }
+
+        .status-fail {
+            background: var(--error);
+            color: var(--text-primary);
+        }
+
+        .criteria-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .criteria-input {
+            margin-top: 0.75rem;
+        }
+
+        .criteria-input input, .criteria-input select, .criteria-input textarea {
+            width: 100%;
+            padding: 0.5rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .score-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .score-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .saved-analyses {
+            margin-top: 3rem;
+        }
+
+        .analysis-history {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .history-item {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover {
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .history-title {
+            font-weight: 600;
+        }
+
+        .history-date {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .score-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Self Funded Search Deal Analyzer</h1>
+            <p>Transparent underwriting criteria for SFS teaser analysis</p>
+        </div>
+
+        <div class="deal-input">
+            <h3 style="margin-bottom: 1rem;">Deal Information</h3>
+            <form id="dealForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="companyName">Company Name</label>
+                        <input type="text" id="companyName" placeholder="Target company name">
+                    </div>
+                    <div class="form-group">
+                        <label for="industry">Industry</label>
+                        <input type="text" id="industry" placeholder="e.g., Software, Manufacturing">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="revenue">Annual Revenue ($M)</label>
+                        <input type="number" id="revenue" step="0.1" placeholder="5.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="ebitda">EBITDA ($M)</label>
+                        <input type="number" id="ebitda" step="0.1" placeholder="1.5">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="description">Business Description</label>
+                    <textarea id="description" placeholder="Brief description of the business model and operations"></textarea>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="analyzeDAeal()">
+                    📊 Analyze Deal
+                </button>
+            </form>
+        </div>
+
+        <div id="analysisResults" style="display: none;">
+            <div class="score-summary">
+                <div class="score-card">
+                    <div class="score-value" id="overallScore" style="color: var(--accent);">--</div>
+                    <div class="score-label">Overall Score</div>
+                </div>
+                <div class="score-card">
+                    <div class="score-value" id="passCount" style="color: var(--success);">--</div>
+                    <div class="score-label">Criteria Passed</div>
+                </div>
+                <div class="score-card">
+                    <div class="score-value" id="warnCount" style="color: var(--warning);">--</div>
+                    <div class="score-label">Warnings</div>
+                </div>
+                <div class="score-card">
+                    <div class="score-value" id="failCount" style="color: var(--error);">--</div>
+                    <div class="score-label">Red Flags</div>
+                </div>
+            </div>
+
+            <div class="analysis-section">
+                <h3 class="section-title">📈 Financial Criteria</h3>
+                <div class="criteria-grid" id="financialCriteria"></div>
+            </div>
+
+            <div class="analysis-section">
+                <h3 class="section-title">🏢 Business Quality</h3>
+                <div class="criteria-grid" id="businessCriteria"></div>
+            </div>
+
+            <div class="analysis-section">
+                <h3 class="section-title">💼 Management & Operations</h3>
+                <div class="criteria-grid" id="managementCriteria"></div>
+            </div>
+
+            <div class="analysis-section">
+                <h3 class="section-title">📋 Deal Structure</h3>
+                <div class="criteria-grid" id="dealCriteria"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 2rem;">
+                <button class="btn btn-primary" onclick="saveAnalysis()">💾 Save Analysis</button>
+                <button class="btn btn-secondary" onclick="resetForm()">🔄 New Analysis</button>
+            </div>
+        </div>
+
+        <div class="saved-analyses">
+            <h3 style="margin-bottom: 1rem;">📁 Saved Analyses</h3>
+            <div id="analysisHistory" class="analysis-history"></div>
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        const criteriaDefinitions = {
+            financial: [
+                {
+                    id: 'revenue_size',
+                    title: 'Revenue Size',
+                    description: 'Minimum $2M ARR preferred, $1M acceptable',
+                    inputType: 'number',
+                    inputLabel: 'Annual Revenue ($M)',
+                    evaluate: (inputs) => {
+                        const revenue = parseFloat(inputs.revenue_size) || 0;
+                        if (revenue >= 2) return { status: 'pass', note: 'Strong revenue base' };
+                        if (revenue >= 1) return { status: 'warn', note: 'Acceptable but on lower end' };
+                        return { status: 'fail', note: 'Below minimum threshold' };
+                    }
+                },
+                {
+                    id: 'ebitda_margin',
+                    title: 'EBITDA Margin',
+                    description: 'Target 20%+ EBITDA margin, 15%+ acceptable',
+                    inputType: 'number',
+                    inputLabel: 'EBITDA Margin (%)',
+                    evaluate: (inputs) => {
+                        const revenue = parseFloat(inputs.revenue) || 0;
+                        const ebitda = parseFloat(inputs.ebitda) || 0;
+                        const margin = revenue > 0 ? (ebitda / revenue) * 100 : 0;
+                        if (margin >= 20) return { status: 'pass', note: `Strong margin: ${margin.toFixed(1)}%` };
+                        if (margin >= 15) return { status: 'warn', note: `Acceptable margin: ${margin.toFixed(1)}%` };
+                        return { status: 'fail', note: `Low margin: ${margin.toFixed(1)}%` };
+                    }
+                },
+                {
+                    id: 'growth_rate',
+                    title: 'Historical Growth',
+                    description: 'Consistent 10%+ annual growth preferred',
+                    inputType: 'number',
+                    inputLabel: 'Average Annual Growth (%)',
+                    evaluate: (inputs) => {
+                        const growth = parseFloat(inputs.growth_rate) || 0;
+                        if (growth >= 15) return { status: 'pass', note: 'Strong growth trajectory' };
+                        if (growth >= 10) return { status: 'warn', note: 'Moderate growth' };
+                        return { status: 'fail', note: 'Insufficient growth' };
+                    }
+                },
+                {
+                    id: 'cash_flow',
+                    title: 'Cash Flow Stability',
+                    description: 'Positive and predictable cash flow',
+                    inputType: 'select',
+                    inputLabel: 'Cash Flow Pattern',
+                    options: ['Consistently positive', 'Mostly positive', 'Break-even', 'Negative'],
+                    evaluate: (inputs) => {
+                        const cf = inputs.cash_flow;
+                        if (cf === 'Consistently positive') return { status: 'pass', note: 'Excellent cash generation' };
+                        if (cf === 'Mostly positive') return { status: 'warn', note: 'Generally stable' };
+                        return { status: 'fail', note: 'Cash flow concerns' };
+                    }
+                }
+            ],
+            business: [
+                {
+                    id: 'market_position',
+                    title: 'Market Position',
+                    description: 'Strong competitive position or niche dominance',
+                    inputType: 'select',
+                    inputLabel: 'Market Position',
+                    options: ['Market leader', 'Strong competitor', 'Niche player', 'Struggling'],
+                    evaluate: (inputs) => {
+                        const pos = inputs.market_position;
+                        if (pos === 'Market leader') return { status: 'pass', note: 'Dominant position' };
+                        if (pos === 'Strong competitor' || pos === 'Niche player') return { status: 'warn', note: 'Solid positioning' };
+                        return { status: 'fail', note: 'Weak market position' };
+                    }
+                },
+                {
+                    id: 'customer_concentration',
+                    title: 'Customer Concentration',
+                    description: 'No single customer >20% of revenue',
+                    inputType: 'number',
+                    inputLabel: 'Largest Customer % of Revenue',
+                    evaluate: (inputs) => {
+                        const conc = parseFloat(inputs.customer_concentration) || 0;
+                        if (conc <= 10) return { status: 'pass', note: 'Well diversified' };
+                        if (conc <= 20) return { status: 'warn', note: 'Acceptable concentration' };
+                        return { status: 'fail', note: 'High customer concentration risk' };
+                    }
+                },
+                {
+                    id: 'recurring_revenue',
+                    title: 'Recurring Revenue',
+                    description: 'Predictable revenue streams preferred',
+                    inputType: 'number',
+                    inputLabel: 'Recurring Revenue %',
+                    evaluate: (inputs) => {
+                        const recurring = parseFloat(inputs.recurring_revenue) || 0;
+                        if (recurring >= 70) return { status: 'pass', note: 'Highly predictable' };
+                        if (recurring >= 40) return { status: 'warn', note: 'Moderate predictability' };
+                        return { status: 'fail', note: 'Low revenue predictability' };
+                    }
+                },
+                {
+                    id: 'industry_outlook',
+                    title: 'Industry Outlook',
+                    description: 'Growing or stable industry with tailwinds',
+                    inputType: 'select',
+                    inputLabel: 'Industry Growth Outlook',
+                    options: ['High growth', 'Steady growth', 'Stable', 'Declining'],
+                    evaluate: (inputs) => {
+                        const outlook = inputs.industry_outlook;
+                        if (outlook === 'High growth') return { status: 'pass', note: 'Strong tailwinds' };
+                        if (outlook === 'Steady growth' || outlook === 'Stable') return { status: 'warn', note: 'Acceptable outlook' };
+                        return { status: 'fail', note: 'Challenging industry' };
+                    }
+                }
+            ],
+            management: [
+                {
+                    id: 'owner_transition',
+                    title: 'Owner Transition',
+                    description: 'Clear transition plan and owner willingness to stay',
+                    inputType: 'select',
+                    inputLabel: 'Owner Involvement Post-Sale',
+                    options: ['Full transition support', 'Limited transition', 'Immediate exit', 'Unknown'],
+                    evaluate: (inputs) => {
+                        const transition = inputs.owner_transition;
+                        if (transition === 'Full transition support') return { status: 'pass', note: 'Smooth transition expected' };
+                        if (transition === 'Limited transition') return { status: 'warn', note: 'Some transition risk' };
+                        return { status: 'fail', note: 'High transition risk' };
+                    }
+                },
+                {
+                    id: 'management_depth',
+                    title: 'Management Depth',
+                    description: 'Strong management team beyond owner',
+                    inputType: 'select',
+                    inputLabel: 'Management Team Strength',
+                    options: ['Strong team', 'Adequate team', 'Owner-dependent', 'Unknown'],
+                    evaluate: (inputs) => {
+                        const depth = inputs.management_depth;
+                        if (depth === 'Strong team') return { status: 'pass', note: 'Low key person risk' };
+                        if (depth === 'Adequate team') return { status: 'warn', note: 'Some strengthening needed' };
+                        return { status: 'fail', note: 'High key person dependency' };
+                    }
+                },
+                {
+                    id: 'systems_processes',
+                    title: 'Systems & Processes',
+                    description: 'Well-documented processes and systems',
+                    inputType: 'select',
+                    inputLabel: 'Operational Systems',
+                    options: ['Highly systematized', 'Adequate systems', 'Ad-hoc processes', 'Unknown'],
+                    evaluate: (inputs) => {
+                        const systems = inputs.systems_processes;
+                        if (systems === 'Highly systematized') return { status: 'pass', note: 'Scalable operations' };
+                        if (systems === 'Adequate systems') return { status: 'warn', note: 'Some improvement needed' };
+                        return { status: 'fail', note: 'Process systematization required' };
+                    }
+                }
+            ],
+            deal: [
+                {
+                    id: 'valuation_multiple',
+                    title: 'Valuation Multiple',
+                    description: '3-6x EBITDA typical for SFS deals',
+                    inputType: 'number',
+                    inputLabel: 'EBITDA Multiple',
+                    evaluate: (inputs) => {
+                        const multiple = parseFloat(inputs.valuation_multiple) || 0;
+                        if (multiple >= 3 && multiple <= 5) return { status: 'pass', note: 'Attractive valuation' };
+                        if (multiple <= 6) return { status: 'warn', note: 'Fair valuation' };
+                        return { status: 'fail', note: 'High valuation risk' };
+                    }
+                },
+                {
+                    id: 'seller_financing',
+                    title: 'Seller Financing',
+                    description: 'Seller note or earnout to bridge gap',
+                    inputType: 'select',
+                    inputLabel: 'Seller Financing Available',
+                    options: ['Yes, substantial', 'Yes, limited', 'No', 'Unknown'],
+                    evaluate: (inputs) => {
+                        const financing = inputs.seller_financing;
+                        if (financing === 'Yes, substantial') return { status: 'pass', note: 'Favorable deal structure' };
+                        if (financing === 'Yes, limited') return { status: 'warn', note: 'Some seller support' };
+                        return { status: 'fail', note: 'Full cash requirement' };
+                    }
+                },
+                {
+                    id: 'deal_timeline',
+                    title: 'Deal Timeline',
+                    description: 'Reasonable timeline for due diligence',
+                    inputType: 'select',
+                    inputLabel: 'Expected Timeline',
+                    options: ['3+ months', '2-3 months', '1-2 months', 'Rushed (<1 month)'],
+                    evaluate: (inputs) => {
+                        const timeline = inputs.deal_timeline;
+                        if (timeline === '3+ months') return { status: 'pass', note: 'Adequate diligence time' };
+                        if (timeline === '2-3 months') return { status: 'warn', note: 'Tight but manageable' };
+                        return { status: 'fail', note: 'Insufficient diligence time' };
+                    }
+                },
+                {
+                    id: 'competition',
+                    title: 'Deal Competition',
+                    description: 'Level of buyer competition',
+                    inputType: 'select',
+                    inputLabel: 'Buyer Competition Level',
+                    options: ['Low competition', 'Moderate competition', 'High competition', 'Auction process'],
+                    evaluate: (inputs) => {
+                        const comp = inputs.competition;
+                        if (comp === 'Low competition') return { status: 'pass', note: 'Negotiation advantage' };
+                        if (comp === 'Moderate competition') return { status: 'warn', note: 'Competitive but winnable' };
+                        return { status: 'fail', note: 'Difficult competitive dynamic' };
+                    }
+                }
+            ]
+        };
+
+        let currentAnalysis = null;
+
+        async function init() {
+            setTimeout(() => {
+                document.getElementById('loader').classList.add('hidden');
+            }, 800);
+            
+            await loadAnalysisHistory();
+        }
+
+        function analyzeDAeal() {
+            const formData = new FormData(document.getElementById('dealForm'));
+            const dealData = {};
+            
+            // Get basic deal info
+            dealData.companyName = document.getElementById('companyName').value;
+            dealData.industry = document.getElementById('industry').value;
+            dealData.revenue = document.getElementById('revenue').value;
+            dealData.ebitda = document.getElementById('ebitda').value;
+            dealData.description = document.getElementById('description').value;
+            
+            if (!dealData.companyName) {
+                alert('Please enter a company name');
+                return;
+            }
+
+            // Generate analysis
+            currentAnalysis = {
+                id: Date.now(),
+                dealData: dealData,
+                timestamp: new Date(),
+                criteria: {}
+            };
+
+            renderAnalysis();
+            document.getElementById('analysisResults').style.display = 'block';
+            document.getElementById('analysisResults').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function renderAnalysis() {
+            renderCriteriaSection('financial', criteriaDefinitions.financial, 'financialCriteria');
+            renderCriteriaSection('business', criteriaDefinitions.business, 'businessCriteria');
+            renderCriteriaSection('management', criteriaDefinitions.management, 'managementCriteria');
+            renderCriteriaSection('deal', criteriaDefinitions.deal, 'dealCriteria');
+            
+            updateScoreSummary();
+        }
+
+        function renderCriteriaSection(section, criteria, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            criteria.forEach(criterion => {
+                const div = document.createElement('div');
+                div.className = 'criteria-item';
+                div.id = `criteria-${criterion.id}`;
+
+                let inputHtml = '';
+                if (criterion.inputType === 'select') {
+                    inputHtml = `
+                        <select id="input-${criterion.id}" onchange="evaluateCriterion('${criterion.id}')">
+                            <option value="">Select...</option>
+                            ${criterion.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                        </select>
+                    `;
+                } else if (criterion.inputType === 'textarea') {
+                    inputHtml = `
+                        <textarea id="input-${criterion.id}" placeholder="${criterion.inputLabel}" onchange="evaluateCriterion('${criterion.id}')"></textarea>
+                    `;
+                } else {
+                    inputHtml = `
+                        <input type="${criterion.inputType}" id="input-${criterion.id}" placeholder="${criterion.inputLabel}" onchange="evaluateCriterion('${criterion.id}')">
+                    `;
+                }
+
+                div.innerHTML = `
+                    <div class="criteria-header">
+                        <div class="criteria-title">${criterion.title}</div>
+                        <div class="criteria-status" id="status-${criterion.id}">Pending</div>
+                    </div>
+                    <div class="criteria-description">${criterion.description}</div>
+                    <div class="criteria-input">
+                        ${inputHtml}
+                    </div>
+                `;
+
+                container.appendChild(div);
+
+                // Pre-populate from current analysis or deal data
+                const input = document.getElementById(`input-${criterion.id}`);
+                if (currentAnalysis?.criteria[criterion.id]?.input !== undefined) {
+                    input.value = currentAnalysis.criteria[criterion.id].input;
+                } else if (currentAnalysis?.dealData[criterion.id] !== undefined) {
+                    input.value = currentAnalysis.dealData[criterion.id];
+                }
+
+                // Auto-evaluate if we have data
+                if (input.value) {
+                    evaluateCriterion(criterion.id);
+                }
+            });
+        }
+
+        function evaluateCriterion(criterionId) {
+            const allCriteria = [...criteriaDefinitions.financial, ...criteriaDefinitions.business, ...criteriaDefinitions.management, ...criteriaDefinitions.deal];
+            const criterion = allCriteria.find(c => c.id === criterionId);
+            
+            if (!criterion) return;
+
+            const input = document.getElementById(`input-${criterionId}`);
+            const value = input.value;
+
+            if (!value) return;
+
+            // Prepare inputs for evaluation
+            const inputs = { ...currentAnalysis.dealData };
+            inputs[criterionId] = value;
+
+            const result = criterion.evaluate(inputs);
+            
+            // Store in current analysis
+            if (!currentAnalysis.criteria) currentAnalysis.criteria = {};
+            currentAnalysis.criteria[criterionId] = {
+                input: value,
+                result: result
+            };
+
+            // Update UI
+            const criteriaItem = document.getElementById(`criteria-${criterionId}`);
+            const statusDiv = document.getElementById(`status-${criterionId}`);
+            
+            criteriaItem.className = `criteria-item ${result.status}`;
+            statusDiv.className = `criteria-status status-${result.status}`;
+            statusDiv.textContent = result.status === 'pass' ? 'Pass' : result.status === 'warn' ? 'Warning' : 'Fail';
+
+            updateScoreSummary();
+        }
+
+        function updateScoreSummary() {
+            if (!currentAnalysis?.criteria) return;
+
+            const results = Object.values(currentAnalysis.criteria).map(c => c.result);
+            const passCount = results.filter(r => r.status === 'pass').length;
+            const warnCount = results.filter(r => r.status === 'warn').length;
+            const failCount = results.filter(r => r.status === 'fail').length;
+            const total = results.length;
+
+            document.getElementById('passCount').textContent = passCount;
+            document.getElementById('warnCount').textContent = warnCount;
+            document.getElementById('failCount').textContent = failCount;
+
+            // Calculate overall score (weighted)
+            const score = total > 0 ? Math.round(((passCount * 3 + warnCount * 1) / (total * 3)) * 100) : 0;
+            document.getElementById('overallScore').textContent = `${score}%`;
+
+            // Update color based on score
+            const scoreEl = document.getElementById('overallScore');
+            if (score >= 70) {
+                scoreEl.style.color = 'var(--success)';
+            } else if (score >= 50) {
+                scoreEl.style.color = 'var(--warning)';
+            } else {
+                scoreEl.style.color = 'var(--error)';
+            }
+        }
+
+        async function saveAnalysis() {
+            if (!currentAnalysis || !currentAnalysis.dealData.companyName) {
+                alert('Please complete the analysis first');
+                return;
+            }
+
+            try {
+                const savedAnalyses = await db.get('saved_analyses') || [];
+                savedAnalyses.unshift(currentAnalysis);
+                
+                // Keep only last 20 analyses
+                if (savedAnalyses.length > 20) {
+                    savedAnalyses.splice(20);
+                }
+
+                await db.set('saved_analyses', savedAnalyses);
+                await loadAnalysisHistory();
+                
+                // Show success message
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Saved!';
+                btn.style.background = 'var(--success)';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'var(--accent)';
+                }, 2000);
+
+            } catch (error) {
+                console.error('Failed to save analysis:', error);
+                alert('Failed to save analysis');
+            }
+        }
+
+        async function loadAnalysisHistory() {
+            try {
+                const savedAnalyses = await db.get('saved_analyses') || [];
+                const historyContainer = document.getElementById('analysisHistory');
+                
+                if (savedAnalyses.length === 0) {
+                    historyContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <p>No saved analyses yet. Complete your first deal analysis to see it here.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                historyContainer.innerHTML = savedAnalyses.map(analysis => {
+                    const date = new Date(analysis.timestamp).toLocaleDateString();
+                    const results = Object.values(analysis.criteria || {}).map(c => c.result);
+                    const passCount = results.filter(r => r.status === 'pass').length;
+                    const total = results.length;
+                    const score = total > 0 ? Math.round((passCount / total) * 100) : 0;
+
+                    return `
+                        <div class="history-item" onclick="loadAnalysis(${analysis.id})">
+                            <div class="history-header">
+                                <div class="history-title">${analysis.dealData.companyName}</div>
+                                <div class="history-date">${date}</div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem;">
+                                <span style="color: var(--text-secondary);">${analysis.dealData.industry || 'Unknown Industry'}</span>
+                                <span style="color: var(--accent); font-weight: 600;">${score}% Score</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Failed to load analysis history:', error);
+            }
+        }
+
+        async function loadAnalysis(analysisId) {
+            try {
+                const savedAnalyses = await db.get('saved_analyses') || [];
+                const analysis = savedAnalyses.find(a => a.id === analysisId);
+                
+                if (!analysis) return;
+
+                // Populate form
+                document.getElementById('companyName').value = analysis.dealData.companyName || '';
+                document.getElementById('industry').value = analysis.dealData.industry || '';
+                document.getElementById('revenue').value = analysis.dealData.revenue || '';
+                document.getElementById('ebitda').value = analysis.dealData.ebitda || '';
+                document.getElementById('description').value = analysis.dealData.description || '';
+
+                currentAnalysis = analysis;
+                renderAnalysis();
+                document.getElementById('analysisResults').style.display = 'block';
+                document.getElementById('analysisResults').scrollIntoView({ behavior: 'smooth' });
+
+            } catch (error) {
+                console.error('Failed to load analysis:', error);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('dealForm').reset();
+            document.getElementById('analysisResults').style.display = 'none';
+            currentAnalysis = null;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
