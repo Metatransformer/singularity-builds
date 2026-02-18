@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "pistisonx-bible-verse-generator-app-429016";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible Verse Generator</title>
+    <style>
+        :root {
+            --primary-bg: #0a0a0a;
+            --secondary-bg: #1a1a1a;
+            --accent: #00d4ff;
+            --text: #e0e0e0;
+            --muted: #888;
+            --border: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--primary-bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .header p {
+            color: var(--muted);
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        .verse-container {
+            background: var(--secondary-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: all 0.3s ease;
+            animation: fadeIn 0.8s ease 0.4s both;
+        }
+
+        .verse-text {
+            font-size: clamp(1.1rem, 3vw, 1.4rem);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+            font-style: italic;
+            text-align: center;
+            opacity: 0.9;
+        }
+
+        .verse-reference {
+            color: var(--accent);
+            font-weight: 600;
+            text-align: right;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent), #0088cc);
+            border: none;
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.1);
+        }
+
+        .favorites-section {
+            margin-top: auto;
+        }
+
+        .favorites-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .favorites-header h3 {
+            color: var(--accent);
+            font-size: 1.3rem;
+        }
+
+        .favorites-count {
+            background: var(--accent);
+            color: var(--primary-bg);
+            padding: 0.3rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .favorites-list {
+            display: grid;
+            gap: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .favorite-item {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .favorite-item:hover {
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        .favorite-text {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.9;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .favorite-ref {
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--muted);
+            padding: 2rem;
+            font-style: italic;
+        }
+
+        .loading {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: var(--primary-bg);
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .verse-container {
+                padding: 1.5rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 280px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✨ Daily Verse</h1>
+            <p>Discover inspiration through God's Word</p>
+        </div>
+
+        <div class="verse-container" id="verseContainer">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+            </div>
+            <div class="verse-text" id="verseText">Click "Generate Verse" to receive your daily inspiration</div>
+            <div class="verse-reference" id="verseReference"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="generateBtn" onclick="generateVerse()">Generate Verse</button>
+            <button class="btn btn-secondary" id="favoriteBtn" onclick="toggleFavorite()" style="display: none;">♡ Add to Favorites</button>
+            <button class="btn btn-secondary" onclick="copyVerse()">📋 Copy Verse</button>
+        </div>
+
+        <div class="favorites-section">
+            <div class="favorites-header">
+                <h3>Favorite Verses</h3>
+                <span class="favorites-count" id="favoritesCount">0</span>
+            </div>
+            <div class="favorites-list" id="favoritesList">
+                <div class="empty-state">No favorite verses yet. Add some by clicking the heart icon!</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        const verses = [
+            { text: "For I know the plans I have for you, declares the Lord, plans for welfare and not for evil, to give you a future and a hope.", reference: "Jeremiah 29:11" },
+            { text: "Trust in the Lord with all your heart, and do not lean on your own understanding. In all your ways acknowledge him, and he will make straight your paths.", reference: "Proverbs 3:5-6" },
+            { text: "And we know that for those who love God all things work together for good, for those who are called according to his purpose.", reference: "Romans 8:28" },
+            { text: "Be strong and courageous. Do not fear or be in dread of them, for it is the Lord your God who goes with you. He will not leave you or forsake you.", reference: "Deuteronomy 31:6" },
+            { text: "The Lord is my shepherd; I shall not want. He makes me lie down in green pastures. He leads me beside still waters.", reference: "Psalm 23:1-2" },
+            { text: "Have I not commanded you? Be strong and courageous. Do not be frightened, and do not be dismayed, for the Lord your God is with you wherever you go.", reference: "Joshua 1:9" },
+            { text: "Come to me, all who labor and are heavy laden, and I will give you rest.", reference: "Matthew 11:28" },
+            { text: "And my God will supply every need of yours according to his riches in glory in Christ Jesus.", reference: "Philippians 4:19" },
+            { text: "Cast all your anxieties on him, because he cares for you.", reference: "1 Peter 5:7" },
+            { text: "But they who wait for the Lord shall renew their strength; they shall mount up with wings like eagles; they shall run and not be weary; they shall walk and not faint.", reference: "Isaiah 40:31" },
+            { text: "The Lord bless you and keep you; the Lord make his face to shine upon you and be gracious to you.", reference: "Numbers 6:24-25" },
+            { text: "And it is my prayer that your love may abound more and more, with knowledge and all discernment.", reference: "Philippians 1:9" },
+            { text: "Peace I leave with you; my peace I give to you. Not as the world gives do I give to you. Let not your hearts be troubled, neither let them be afraid.", reference: "John 14:27" },
+            { text: "She is clothed with strength and dignity; she can laugh at the days to come.", reference: "Proverbs 31:25" },
+            { text: "Therefore do not worry about tomorrow, for tomorrow will worry about itself. Each day has enough trouble of its own.", reference: "Matthew 6:34" },
+            { text: "The steadfast love of the Lord never ceases; his mercies never come to an end; they are new every morning; great is your faithfulness.", reference: "Lamentations 3:22-23" },
+            { text: "I can do all things through him who strengthens me.", reference: "Philippians 4:13" },
+            { text: "Fear not, for I am with you; be not dismayed, for I am your God; I will strengthen you, I will help you, I will uphold you with my righteous right hand.", reference: "Isaiah 41:10" },
+            { text: "And above all these put on love, which binds everything together in perfect harmony.", reference: "Colossians 3:14" },
+            { text: "Blessed are those who mourn, for they shall be comforted.", reference: "Matthew 5:4" },
+            { text: "The Lord your God is in your midst, a mighty one who will save; he will rejoice over you with gladness; he will quiet you by his love.", reference: "Zephaniah 3:17" },
+            { text: "Let all that you do be done in love.", reference: "1 Corinthians 16:14" },
+            { text: "Delight yourself in the Lord, and he will give you the desires of your heart.", reference: "Psalm 37:4" },
+            { text: "The name of the Lord is a strong tower; the righteous man runs into it and is safe.", reference: "Proverbs 18:10" },
+            { text: "Be still, and know that I am God. I will be exalted among the nations, I will be exalted in the earth!", reference: "Psalm 46:10" }
+        ];
+
+        let currentVerse = null;
+        let favorites = [];
+
+        async function init() {
+            try {
+                favorites = await db.get("favorites") || [];
+                updateFavoritesDisplay();
+            } catch (error) {
+                console.error("Error loading favorites:", error);
+                favorites = [];
+            }
+        }
+
+        async function generateVerse() {
+            const loading = document.getElementById('loading');
+            const verseText = document.getElementById('verseText');
+            const verseReference = document.getElementById('verseReference');
+            const favoriteBtn = document.getElementById('favoriteBtn');
+
+            loading.style.display = 'flex';
+            verseText.style.opacity = '0';
+            verseReference.style.opacity = '0';
+
+            setTimeout(() => {
+                const randomIndex = Math.floor(Math.random() * verses.length);
+                currentVerse = verses[randomIndex];
+
+                verseText.textContent = `"${currentVerse.text}"`;
+                verseReference.textContent = `— ${currentVerse.reference}`;
+
+                loading.style.display = 'none';
+                verseText.style.opacity = '1';
+                verseReference.style.opacity = '1';
+                favoriteBtn.style.display = 'inline-block';
+
+                updateFavoriteButton();
+            }, 800);
+        }
+
+        async function toggleFavorite() {
+            if (!currentVerse) return;
+
+            const existingIndex = favorites.findIndex(fav => 
+                fav.reference === currentVerse.reference
+            );
+
+            if (existingIndex > -1) {
+                favorites.splice(existingIndex, 1);
+                showToast("Removed from favorites");
+            } else {
+                favorites.push({
+                    text: currentVerse.text,
+                    reference: currentVerse.reference,
+                    dateAdded: new Date().toISOString()
+                });
+                showToast("Added to favorites!");
+            }
+
+            try {
+                await db.set("favorites", favorites);
+            } catch (error) {
+                console.error("Error saving favorites:", error);
+            }
+
+            updateFavoriteButton();
+            updateFavoritesDisplay();
+        }
+
+        function updateFavoriteButton() {
+            const favoriteBtn = document.getElementById('favoriteBtn');
+            if (!currentVerse) return;
+
+            const isFavorited = favorites.some(fav => 
+                fav.reference === currentVerse.reference
+            );
+
+            favoriteBtn.innerHTML = isFavorited ? '❤️ Remove from Favorites' : '♡ Add to Favorites';
+        }
+
+        function updateFavoritesDisplay() {
+            const favoritesList = document.getElementById('favoritesList');
+            const favoritesCount = document.getElementById('favoritesCount');
+
+            favoritesCount.textContent = favorites.length;
+
+            if (favorites.length === 0) {
+                favoritesList.innerHTML = '<div class="empty-state">No favorite verses yet. Add some by clicking the heart icon!</div>';
+                return;
+            }
+
+            favoritesList.innerHTML = favorites
+                .sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded))
+                .map(verse => `
+                    <div class="favorite-item" onclick="displayVerse('${verse.text.replace(/'/g, "\\'")}', '${verse.reference}')">
+                        <div class="favorite-text">"${verse.text}"</div>
+                        <div class="favorite-ref">${verse.reference}</div>
+                    </div>
+                `).join('');
+        }
+
+        function displayVerse(text, reference) {
+            currentVerse = { text, reference };
+            document.getElementById('verseText').textContent = `"${text}"`;
+            document.getElementById('verseReference').textContent = `— ${reference}`;
+            document.getElementById('favoriteBtn').style.display = 'inline-block';
+            updateFavoriteButton();
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function copyVerse() {
+            if (!currentVerse) {
+                showToast("Generate a verse first!");
+                return;
+            }
+
+            const verseText = `"${currentVerse.text}" — ${currentVerse.reference}`;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(verseText).then(() => {
+                    showToast("Verse copied to clipboard!");
+                }).catch(() => {
+                    fallbackCopy(verseText);
+                });
+            } else {
+                fallbackCopy(verseText);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast("Verse copied to clipboard!");
+            } catch (err) {
+                showToast("Unable to copy verse");
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                generateVerse();
+            } else if (e.key === 'c' && e.ctrlKey) {
+                e.preventDefault();
+                copyVerse();
+            }
+        });
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
