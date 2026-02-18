@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';">
+<script>
+/* SingularityDB — DO NOT MODIFY THIS BLOCK */
+const SINGULARITY_DB_API = "https://8mag3jdi5f.execute-api.us-east-1.amazonaws.com/api/data";
+const SINGULARITY_DB_NS = "S90633683-app-to-process-my-e-mail--308632";
+class SingularityDB {
+  constructor(ns) { this.ns = ns; this.api = SINGULARITY_DB_API; }
+  async get(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) { console.error("SingularityDB get error:", e); return null; }
+  }
+  async set(key, value) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({value: value})
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB set error:", e); return {ok: false}; }
+  }
+  async delete(key) {
+    try {
+      const r = await fetch(this.api + "/" + this.ns + "/" + encodeURIComponent(key), {
+        method: "DELETE"
+      });
+      return await r.json();
+    } catch(e) { console.error("SingularityDB delete error:", e); return {ok: false}; }
+  }
+  async list() {
+    try {
+      const r = await fetch(this.api + "/" + this.ns);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch(e) { console.error("SingularityDB list error:", e); return []; }
+  }
+}
+const db = new SingularityDB(SINGULARITY_DB_NS);
+/* END SingularityDB */
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Processing Hub</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: #1a1a1a;
+            --accent: #00d4ff;
+            --text: #e0e0e0;
+            --text-muted: #888;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --danger: #ff4444;
+            --border: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-dark);
+            display: grid;
+            place-items: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, var(--accent), #fff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { filter: brightness(1); }
+            to { filter: brightness(1.2); }
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.1);
+            border-color: var(--accent);
+        }
+
+        .card h3 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .setup-form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        input, textarea, select {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            color: var(--text);
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        button {
+            background: linear-gradient(45deg, var(--accent), #0099cc);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+
+        .status.active {
+            color: var(--success);
+        }
+
+        .status.inactive {
+            color: var(--text-muted);
+        }
+
+        .email-list {
+            margin-top: 2rem;
+        }
+
+        .email-item {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .email-item.high-priority {
+            border-left-color: var(--danger);
+        }
+
+        .email-item.medium-priority {
+            border-left-color: var(--warning);
+        }
+
+        .email-item.low-priority {
+            border-left-color: var(--success);
+        }
+
+        .email-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .email-subject {
+            font-weight: 600;
+        }
+
+        .priority-score {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .priority-high {
+            background: var(--danger);
+            color: white;
+        }
+
+        .priority-medium {
+            background: var(--warning);
+            color: var(--bg-dark);
+        }
+
+        .priority-low {
+            background: var(--success);
+            color: var(--bg-dark);
+        }
+
+        .email-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .email-summary {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .email-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            background: var(--bg-dark);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .btn-small:hover {
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 {
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            color: var(--text);
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .email-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>📧 Email Processing Hub</h1>
+            <p class="subtitle">AI-powered inbox management and automation</p>
+        </header>
+
+        <div class="stats-grid" id="stats">
+            <div class="stat-item">
+                <div class="stat-number" id="totalEmails">0</div>
+                <div class="stat-label">Total Processed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="highPriority">0</div>
+                <div class="stat-label">High Priority</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="mediumPriority">0</div>
+                <div class="stat-label">Medium Priority</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="lowPriority">0</div>
+                <div class="stat-label">Low Priority</div>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <h3>🔧 Configuration</h3>
+                <form class="setup-form" id="configForm">
+                    <div class="input-group">
+                        <label for="emailProvider">Email Provider</label>
+                        <select id="emailProvider">
+                            <option value="gmail">Gmail</option>
+                            <option value="outlook">Outlook</option>
+                            <option value="imap">IMAP</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="watchInterval">Check Interval (minutes)</label>
+                        <input type="number" id="watchInterval" value="5" min="1" max="60">
+                    </div>
+                    <div class="input-group">
+                        <label for="priorityKeywords">High Priority Keywords (comma-separated)</label>
+                        <input type="text" id="priorityKeywords" placeholder="urgent, important, deadline, asap">
+                    </div>
+                    <div class="input-group">
+                        <label for="autoReplyEnabled">Auto-Reply</label>
+                        <select id="autoReplyEnabled">
+                            <option value="false">Disabled</option>
+                            <option value="true">Enabled</option>
+                        </select>
+                    </div>
+                    <button type="submit">Save Configuration</button>
+                </form>
+                <div class="status inactive" id="serviceStatus">
+                    <span>●</span>
+                    Service Inactive
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🎯 Processing Rules</h3>
+                <form class="setup-form" id="rulesForm">
+                    <div class="input-group">
+                        <label for="lowPriorityAction">Low Priority Action</label>
+                        <select id="lowPriorityAction">
+                            <option value="archive">Archive</option>
+                            <option value="label">Label Only</option>
+                            <option value="folder">Move to Folder</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="summaryLength">Summary Length</label>
+                        <select id="summaryLength">
+                            <option value="short">Short (1-2 lines)</option>
+                            <option value="medium">Medium (3-4 lines)</option>
+                            <option value="long">Long (5+ lines)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="replyTemplate">Auto-Reply Template</label>
+                        <textarea id="replyTemplate" rows="3" placeholder="Thank you for your email. I'll review it and get back to you soon."></textarea>
+                    </div>
+                    <button type="submit">Update Rules</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>🚀 Service Control</h3>
+                <div class="setup-form">
+                    <button id="startService" onclick="toggleService()">Start Monitoring</button>
+                    <button id="testEmail" onclick="simulateEmail()">Simulate Email</button>
+                    <button id="clearData" onclick="clearAllData()">Clear All Data</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📨 Recent Emails</h3>
+            <div class="email-list" id="emailList">
+                <div class="empty-state">
+                    <h3>No emails processed yet</h3>
+                    <p>Configure your settings and start monitoring to see processed emails here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="https://singularityengine.ai" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:#333;text-decoration:none;font-family:system-ui;z-index:9999;opacity:0.5" onmouseover="this.style.opacity='1';this.style.color='#00d4ff'" onmouseout="this.style.opacity='0.5';this.style.color='#333'">Built by Singularity Engine 🤖</a>
+
+    <script>
+        let monitoringActive = false;
+        let monitoringInterval;
+        
+        // Sample email templates for simulation
+        const sampleEmails = [
+            {
+                subject: "Urgent: Project Deadline Tomorrow",
+                from: "manager@company.com",
+                content: "Hi, we need to finalize the quarterly report by tomorrow morning. This is critical for the board meeting.",
+                keywords: ["urgent", "deadline", "critical"]
+            },
+            {
+                subject: "Weekly Newsletter - Tech Updates",
+                from: "newsletter@techblog.com",
+                content: "Here are this week's top technology stories and trends you should know about.",
+                keywords: ["newsletter", "updates"]
+            },
+            {
+                subject: "Meeting Request - Next Week",
+                from: "colleague@company.com",
+                content: "Would you be available for a brief meeting next week to discuss the new project requirements?",
+                keywords: ["meeting", "request"]
+            },
+            {
+                subject: "Important: Security Update Required",
+                from: "security@company.com",
+                content: "Please update your password and enable two-factor authentication as soon as possible.",
+                keywords: ["important", "security", "required"]
+            },
+            {
+                subject: "Lunch Invitation",
+                from: "friend@email.com",
+                content: "Hey! Would you like to grab lunch this weekend? I know a great new restaurant.",
+                keywords: ["lunch", "invitation"]
+            }
+        ];
+
+        async function init() {
+            try {
+                // Load saved configuration
+                const config = await db.get("emailConfig") || {};
+                const rules = await db.get("processingRules") || {};
+                
+                // Populate form fields
+                if (config.emailProvider) document.getElementById("emailProvider").value = config.emailProvider;
+                if (config.watchInterval) document.getElementById("watchInterval").value = config.watchInterval;
+                if (config.priorityKeywords) document.getElementById("priorityKeywords").value = config.priorityKeywords;
+                if (config.autoReplyEnabled !== undefined) document.getElementById("autoReplyEnabled").value = config.autoReplyEnabled.toString();
+                
+                if (rules.lowPriorityAction) document.getElementById("lowPriorityAction").value = rules.lowPriorityAction;
+                if (rules.summaryLength) document.getElementById("summaryLength").value = rules.summaryLength;
+                if (rules.replyTemplate) document.getElementById("replyTemplate").value = rules.replyTemplate;
+                
+                // Load and display emails
+                await loadEmails();
+                await updateStats();
+                
+                // Set up form handlers
+                document.getElementById("configForm").addEventListener("submit", saveConfiguration);
+                document.getElementById("rulesForm").addEventListener("submit", saveRules);
+                
+                // Auto-start if was previously active
+                const wasActive = await db.get("monitoringActive");
+                if (wasActive) {
+                    toggleService();
+                }
+                
+                setTimeout(() => {
+                    document.getElementById("loader").classList.add("hidden");
+                }, 500);
+                
+            } catch (error) {
+                console.error("Initialization error:", error);
+                showToast("Error initializing app", "error");
+                document.getElementById("loader").classList.add("hidden");
+            }
+        }
+
+        async function saveConfiguration(e) {
+            e.preventDefault();
+            
+            try {
+                const config = {
+                    emailProvider: document.getElementById("emailProvider").value,
+                    watchInterval: parseInt(document.getElementById("watchInterval").value),
+                    priorityKeywords: document.getElementById("priorityKeywords").value,
+                    autoReplyEnabled: document.getElementById("autoReplyEnabled").value === "true"
+                };
+                
+                await db.set("emailConfig", config);
+                showToast("Configuration saved successfully");
+            } catch (error) {
+                console.error("Error saving configuration:", error);
+                showToast("Error saving configuration", "error");
+            }
+        }
+
+        async function saveRules(e) {
+            e.preventDefault();
+            
+            try {
+                const rules = {
+                    lowPriorityAction: document.getElementById("lowPriorityAction").value,
+                    summaryLength: document.getElementById("summaryLength").value,
+                    replyTemplate: document.getElementById("replyTemplate").value
+                };
+                
+                await db.set("processingRules", rules);
+                showToast("Processing rules updated successfully");
+            } catch (error) {
+                console.error("Error saving rules:", error);
+                showToast("Error saving rules", "error");
+            }
+        }
+
+        async function toggleService() {
+            try {
+                if (monitoringActive) {
+                    // Stop monitoring
+                    clearInterval(monitoringInterval);
+                    monitoringActive = false;
+                    await db.set("monitoringActive", false);
+                    
+                    document.getElementById("serviceStatus").innerHTML = '<span>●</span> Service Inactive';
+                    document.getElementById("serviceStatus").className = 'status inactive';
+                    document.getElementById("startService").textContent = 'Start Monitoring';
+                    
+                    showToast("Email monitoring stopped");
+                } else {
+                    // Start monitoring
+                    const config = await db.get("emailConfig") || {};
+                    const interval = (config.watchInterval || 5) * 60000; // Convert to milliseconds
+                    
+                    monitoringActive = true;
+                    await db.set("monitoringActive", true);
+                    
+                    // Simulate checking emails periodically
+                    monitoringInterval = setInterval(simulateEmailCheck, interval);
+                    
+                    document.getElementById("serviceStatus").innerHTML = '<span>●</span> Service Active';
+                    document.getElementById("serviceStatus").className = 'status active';
+                    document.getElementById("startService").textContent = 'Stop Monitoring';
+                    
+                    showToast("Email monitoring started");
+                }
+            } catch (error) {
+                console.error("Error toggling service:", error);
+                showToast("Error toggling service", "error");
+            }
+        }
+
+        async function simulateEmailCheck() {
+            // Randomly decide if a new email arrives (30% chance)
+            if (Math.random() > 0.7) {
+                await simulateEmail();
+            }
+        }
+
+        async function simulateEmail() {
+            try {
+                const config = await db.get("emailConfig") || {};
+                const rules = await db.get("processingRules") || {};
+                
+                // Select a random sample email
+                const email = sampleEmails[Math.floor(Math.random() * sampleEmails.length)];
+                
+                // Calculate priority score
+                const priorityKeywords = (config.priorityKeywords || "urgent,important,deadline,asap").toLowerCase().split(',').map(k => k.trim());
+                const emailText = (email.subject + " " + email.content).toLowerCase();
+                
+                let score = 0;
+                priorityKeywords.forEach(keyword => {
+                    if (emailText.includes(keyword)) score += 10;
+                });
+                
+                // Add some randomness
+                score += Math.floor(Math.random() * 20);
+                
+                let priority;
+                if (score >= 20) priority = "high";
+                else if (score >= 10) priority = "medium";
+                else priority = "low";
+                
+                // Generate summary based on length preference
+                const summaryLength = rules.summaryLength || "short";
+                let summary;
+                
+                if (summaryLength === "short") {
+                    summary = email.content.substring(0, 100) + "...";
+                } else if (summaryLength === "medium") {
+                    summary = email.content.substring(0, 200) + "...";
+                } else {
+                    summary = email.content;
+                }
+                
+                // Create processed email object
+                const processedEmail = {
+                    id: Date.now().toString(),
+                    subject: email.subject,
+                    from: email.from,
+                    content: email.content,
+                    summary: summary,
+                    priority: priority,
+                    score: score,
+                    timestamp: new Date().toISOString(),
+                    processed: true,
+                    autoReply: config.autoReplyEnabled && priority !== "low",
+                    action: priority === "low" ? (rules.lowPriorityAction || "archive") : "none"
+                };
+                
+                // Save to database
+                const emails = await db.get("processedEmails") || [];
+                emails.unshift(processedEmail); // Add to beginning
+                
+                // Keep only last 50 emails
+                if (emails.length > 50) {
+                    emails.splice(50);
+                }
+                
+                await db.set("processedEmails", emails);
+                
+                // Update display
+                await loadEmails();
+                await updateStats();
+                
+                showToast(`New ${priority} priority email processed`);
+                
+            } catch (error) {
+                console.error("Error simulating email:", error);
+                showToast("Error processing email", "error");
+            }
+        }
+
+        async function loadEmails() {
+            try {
+                const emails = await db.get("processedEmails") || [];
+                const emailList = document.getElementById("emailList");
+                
+                if (emails.length === 0) {
+                    emailList.innerHTML = `
+                        <div class="empty-state">
+                            <h3>No emails processed yet</h3>
+                            <p>Configure your settings and start monitoring to see processed emails here.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                emailList.innerHTML = emails.map(email => `
+                    <div class="email-item ${email.priority}-priority">
+                        <div class="email-header">
+                            <div class="email-subject">${email.subject}</div>
+                            <div class="priority-score priority-${email.priority}">
+                                ${email.priority.toUpperCase()} (${email.score})
+                            </div>
+                        </div>
+                        <div class="email-meta">
+                            From: ${email.from} • ${new Date(email.timestamp).toLocaleString()}
+                        </div>
+                        <div class="email-summary">${email.summary}</div>
+                        <div class="email-actions">
+                            ${email.autoReply ? '<button class="btn-small">📤 Auto-Reply Sent</button>' : ''}
+                            ${email.action !== 'none' ? `<button class="btn-small">📁 ${email.action.charAt(0).toUpperCase() + email.action.slice(1)}d</button>` : ''}
+                            <button class="btn-small" onclick="viewFullEmail('${email.id}')">👁️ View Full</button>
+                            <button class="btn-small" onclick="deleteEmail('${email.id}')">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error("Error loading emails:", error);
+                showToast("Error loading emails", "error");
+            }
+        }
+
+        async function updateStats() {
+            try {
+                const emails = await db.get("processedEmails") || [];
+                
+                const stats = {
+                    total: emails.length,
+                    high: emails.filter(e => e.priority === "high").length,
+                    medium: emails.filter(e => e.priority === "medium").length,
+                    low: emails.filter(e => e.priority === "low").length
+                };
+                
+                document.getElementById("totalEmails").textContent = stats.total;
+                document.getElementById("highPriority").textContent = stats.high;
+                document.getElementById("mediumPriority").textContent = stats.medium;
+                document.getElementById("lowPriority").textContent = stats.low;
+                
+            } catch (error) {
+                console.error("Error updating stats:", error);
+            }
+        }
+
+        async function viewFullEmail(emailId) {
+            try {
+                const emails = await db.get("processedEmails") || [];
+                const email = emails.find(e => e.id === emailId);
+                
+                if (email) {
+                    alert(`Subject: ${email.subject}\n\nFrom: ${email.from}\n\nFull Content:\n${email.content}`);
+                }
+            } catch (error) {
+                console.error("Error viewing email:", error);
+                showToast("Error viewing email", "error");
+            }
+        }
+
+        async function deleteEmail(emailId) {
+            try {
+                const emails = await db.get("processedEmails") || [];
+                const filteredEmails = emails.filter(e => e.id !== emailId);
+                
+                await db.set("processedEmails", filteredEmails);
+                await loadEmails();
+                await updateStats();
+                
+                showToast("Email deleted");
+            } catch (error) {
+                console.error("Error deleting email:", error);
+                showToast("Error deleting email", "error");
+            }
+        }
+
+        async function clearAllData() {
+            if (confirm("Are you sure you want to clear all processed emails? This cannot be undone.")) {
+                try {
+                    await db.delete("processedEmails");
+                    await loadEmails();
+                    await updateStats();
+                    
+                    showToast("All data cleared");
+                } catch (error) {
+                    console.error("Error clearing data:", error);
+                    showToast("Error clearing data", "error");
+                }
+            }
+        }
+
+        function showToast(message, type = "success") {
+            const toast = document.createElement("div");
+            toast.className = "toast";
+            toast.textContent = message;
+            
+            if (type === "error") {
+                toast.style.borderColor = "var(--danger)";
+                toast.style.color = "var(--danger)";
+            }
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add("show"), 100);
+            
+            setTimeout(() => {
+                toast.classList.remove("show");
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
